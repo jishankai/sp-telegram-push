@@ -166,7 +166,7 @@ async def fetch_block_trade_data():
             await asyncio.sleep(0.1)
 
         # Wait for 60 seconds before fetching data again
-        await asyncio.sleep(60)
+        await asyncio.sleep(180)
 
 # Define a function to pop 'block_trade_queue' data from Redis and if BTC's size>=25 or ETH's size>=250 send it to Telegram group
 async def send_block_trade_data():
@@ -181,7 +181,7 @@ async def send_block_trade_data():
             elif data["currency"] == "ETH" and float(data["size"]) >= 250:
                 await send_block_trade_to_telegram(data)
         # Wait for 10 second before fetching data again
-        await asyncio.sleep(1)
+        await asyncio.sleep(2)
 
 # Define a function to send the data with prettify format to Telegram group
 async def send_block_trade_to_telegram(data):
