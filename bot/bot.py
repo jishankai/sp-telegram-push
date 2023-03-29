@@ -117,7 +117,7 @@ async def fetch_okx_data(currency):
                 "currency": currency,
                 "direction": trade["side"],
                 "price": trade["px"],
-                "size": trade["sz"],
+                "size": int(trade["sz"])/100 if currency=="BTC" else int(trade["sz"])/10,
                 "iv": None,
                 "index_price": trade["indexPx"],
                 "timestamp": trade["ts"],
@@ -181,14 +181,14 @@ async def send_block_trade_data():
             elif data["currency"] == "ETH" and float(data["size"]) >= 250:
                 await send_block_trade_to_telegram(data)
         # Wait for 10 second before fetching data again
-        await asyncio.sleep(2)
+        await asyncio.sleep(0.5)
 
 # Define a function to send the data with prettify format to Telegram group
 async def send_block_trade_to_telegram(data):
     direction = data["direction"].upper()
     callOrPut = data["symbol"].split("-")[-1]
     currency = data["currency"]
-    text = f'<i>📊 {data["source"].upper()}\n🕛 {datetime.fromtimestamp(int(data["timestamp"])//1000)} UTC\n<b>{"🔴" if direction=="SELL" else "🟢"} {direction}\n{"🔶" if currency=="BTC" else "🔷"} {data["symbol"]} {"📈" if callOrPut=="C" else "📉"}</b>\n<b>Price</b>: {data["price"]} {"₿" if currency=="BTC" else "Ξ"}\n<b>Size</b>: {data["size"]} {"₿" if currency=="BTC" else "Ξ"}\n<b>IV</b>: {str(data["iv"])+"%" if data["iv"] else "Unknown"}\n<b>Index Price</b>: {"$"+str(data["index_price"]) if data["index_price"] else "Unknown"}</i>'
+    text = f'<i>📊 {data["source"].upper()}\n🕛 {datetime.fromtimestamp(int(data["timestamp"])//1000)} UTC\n<b>{"🔴" if direction=="SELL" else "🟢"} {direction}\n{"🔶" if currency=="BTC" else "🔷"} {data["symbol"]} {"📈" if callOrPut=="C" else "📉"}</b>\n<b>Price</b>: {data["price"]} {"U" if data["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"}\n<b>Size</b>: {data["size"]} {"₿" if currency=="BTC" else "Ξ"}\n<b>IV</b>: {str(data["iv"])+"%" if data["iv"] else "Unknown"}\n<b>Index Price</b>: {"$"+str(data["index_price"]) if data["index_price"] else "Unknown"}</i>'
 
     # Send the data to Telegram group
     await bot.send_message(
