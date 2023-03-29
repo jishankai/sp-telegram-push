@@ -24,7 +24,6 @@ class RedisClient:
 
     # store array in redis with a timeout
     def put_array(self, array, key, timeout):
-        self.client.delete(key)
         for item in array:
             self.client.lpush(key, item)
         self.client.expire(key, timeout)

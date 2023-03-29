@@ -148,7 +148,7 @@ async def fetch_bybit_symbol():
         # 将btcSymbolList,ethSymbolList数组里的symbol值取出来
         symbols = [symbol["symbol"] for symbol in btcSymbolList] + [symbol["symbol"] for symbol in ethSymbolList]
         # Save the symbols array in Redis and set a timeout
-        redis_client.put_array(symbols, 'bybit_symbols', timeout=60)
+        redis_client.put_array(symbols, 'bybit_symbols', timeout=600)
 
         return symbols
 
@@ -173,8 +173,8 @@ async def send_block_trade_data():
     while True:
         # Pop data from Redis
         data = redis_client.get()
-        logger.error(f"Pop data from Redis: {data}")
         if data:
+            logger.error(f"Pop data from Redis: {data}")
             # Check if the size is >=25 or >=250
             if data["currency"] == "BTC" and float(data["size"]) >= 25:
                 await send_block_trade_to_telegram(data)
