@@ -73,7 +73,7 @@ async def fetch_bybit_data(symbol):
     trades = data["result"]["list"]
     for trade in trades:
         id = f"bybit_{trade['execId']}"
-        if trade["isBlockTrade"] and not redis_client.is_member(id):
+        if not redis_client.is_member(id):
             """ Parse the trade data and return a dict (source, symbol, currency, direction, price, size, iv, index_price, timestamp). The trade data is in the following format:
             {
             "symbol": "BTC-24MAR23-26000-P",
@@ -166,7 +166,7 @@ async def fetch_block_trade_data():
             await asyncio.sleep(0.1)
 
         # Wait for 60 seconds before fetching data again
-        await asyncio.sleep(180)
+        await asyncio.sleep(60)
 
 # Define a function to pop 'block_trade_queue' data from Redis and if BTC's size>=25 or ETH's size>=250 send it to Telegram group
 async def send_block_trade_data():
