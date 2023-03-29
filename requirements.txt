@@ -1,0 +1,5 @@
+python-telegram-bot==20.1
+PyYAML==6.0
+python-dotenv==0.21.0
+requests==2.26.0
+redis

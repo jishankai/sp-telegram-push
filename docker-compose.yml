@@ -1,0 +1,21 @@
+version: "3"
+
+services:
+  sp_telegram_push:
+    container_name: sp_telegram_push
+    command: python3 bot/bot.py
+    restart: always
+    build:
+      context: "."
+      dockerfile: Dockerfile
+    depends_on:
+      - redis
+
+  redis:
+    container_name: redis
+    image: redis:latest
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redis:/data
