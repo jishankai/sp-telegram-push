@@ -73,7 +73,7 @@ async def fetch_bybit_data(symbol):
     trades = data["result"]["list"]
     for trade in trades:
         id = f"bybit_{trade['execId']}"
-        if not redis_client.is_member(id):
+        if trade["isBlockTrade"] and not redis_client.is_member(id):
             """ Parse the trade data and return a dict (source, symbol, currency, direction, price, size, iv, index_price, timestamp). The trade data is in the following format:
             {
             "symbol": "BTC-24MAR23-26000-P",
