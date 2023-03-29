@@ -188,7 +188,7 @@ async def send_block_trade_to_telegram(data):
     direction = data["direction"].upper()
     callOrPut = data["symbol"].split("-")[-1]
     currency = data["currency"]
-    text = f'<i>📊 {data["source"].upper()}\n🕛 {datetime.fromtimestamp(int(data["timestamp"])//1000)} UTC\n<b>{"🔴" if direction=="SELL" else "🟢"}{direction}\n{"🔶" if currency=="BTC" else "🔷"} {data["symbol"]} {"📈" if callOrPut=="C" else "📉"}</b>\n<b>Price</b>: {data["price"]} {"₿" if currency=="BTC" else "Ξ"}\n<b>Size</b>: {data["size"]} {"₿" if currency=="BTC" else "Ξ"}\n<b>IV</b>: {str(data["iv"])+"%" if data["iv"] else "Unknown"}\n<b>Index Price</b>: {"$"+str(data["index_price"]) if data["index_price"] else "Unknown"}</i>'
+    text = f'<i>📊 {data["source"].upper()}\n🕛 {datetime.fromtimestamp(int(data["timestamp"])//1000)} UTC\n<b>{"🔴" if direction=="SELL" else "🟢"} {direction}\n{"🔶" if currency=="BTC" else "🔷"} {data["symbol"]} {"📈" if callOrPut=="C" else "📉"}</b>\n<b>Price</b>: {data["price"]} {"₿" if currency=="BTC" else "Ξ"}\n<b>Size</b>: {data["size"]} {"₿" if currency=="BTC" else "Ξ"}\n<b>IV</b>: {str(data["iv"])+"%" if data["iv"] else "Unknown"}\n<b>Index Price</b>: {"$"+str(data["index_price"]) if data["index_price"] else "Unknown"}</i>'
 
     # Send the data to Telegram group
     await bot.send_message(
