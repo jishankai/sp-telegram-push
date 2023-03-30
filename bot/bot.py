@@ -153,7 +153,7 @@ async def fetch_bybit_symbol():
         return symbols
 
 # Define a function to fetch data from the API and store it in Redis
-async def fetch_block_trade_data():
+async def fetch_trade_data():
     while True:
         # Fetch btc,eth data from deribit, bybit, okx
         await fetch_deribit_data("BTC")
@@ -163,13 +163,13 @@ async def fetch_block_trade_data():
         symbols = await fetch_bybit_symbol()
         for symbol in symbols:
             await fetch_bybit_data(symbol)
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(1)
 
         # Wait for 60 seconds before fetching data again
         await asyncio.sleep(60)
 
 # Define a function to pop 'block_trade_queue' data from Redis and if BTC's size>=25 or ETH's size>=250 send it to Telegram group
-async def send_block_trade_data():
+async def handle_trade_data():
     while True:
         # Pop data from Redis
         data = redis_client.get()
@@ -177,32 +177,38 @@ async def send_block_trade_data():
             logger.error(f"Pop data from Redis: {data}")
             # Check if the size is >=25 or >=250
             if data["currency"] == "BTC" and float(data["size"]) >= 25:
-                await send_block_trade_to_telegram(data)
+                redis_client.put_item(data, 'block_trade_queue')
             elif data["currency"] == "ETH" and float(data["size"]) >= 250:
-                await send_block_trade_to_telegram(data)
+                redis_client.put_item(data, 'block_trade_queue')
         # Wait for 10 second before fetching data again
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(0.1)
 
 # Define a function to send the data with prettify format to Telegram group
-async def send_block_trade_to_telegram(data):
-    direction = data["direction"].upper()
-    callOrPut = data["symbol"].split("-")[-1]
-    currency = data["currency"]
-    text = f'<i>📊 {data["source"].upper()}\n🕛 {datetime.fromtimestamp(int(data["timestamp"])//1000)} UTC\n<b>{"🔴" if direction=="SELL" else "🟢"} {direction}\n{"🔶" if currency=="BTC" else "🔷"} {data["symbol"]} {"📈" if callOrPut=="C" else "📉"}</b>\n<b>Price</b>: {data["price"]} {"U" if data["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"}\n<b>Size</b>: {data["size"]} {"₿" if currency=="BTC" else "Ξ"}\n<b>IV</b>: {str(data["iv"])+"%" if data["iv"] else "Unknown"}\n<b>Index Price</b>: {"$"+str(data["index_price"]) if data["index_price"] else "Unknown"}</i>'
+async def send_block_trade_to_telegram():
+    while True:
+        # Pop data from Redis
+        data = redis_client.get_item('block_trade_queue')
+        if data:
+            direction = data["direction"].upper()
+            callOrPut = data["symbol"].split("-")[-1]
+            currency = data["currency"]
+            text = f'<i>📊 {data["source"].upper()}\n🕛 {datetime.fromtimestamp(int(data["timestamp"])//1000)} UTC\n<b>{"🔴" if direction=="SELL" else "🟢"} {direction}\n{"🔶" if currency=="BTC" else "🔷"} {data["symbol"]} {"📈" if callOrPut=="C" else "📉"}</b>\n<b>Price</b>: {data["price"]} {"U" if data["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"}\n<b>Size</b>: {data["size"]} {"₿" if currency=="BTC" else "Ξ"}\n<b>IV</b>: {str(data["iv"])+"%" if data["iv"] else "Unknown"}\n<b>Index Price</b>: {"$"+str(data["index_price"]) if data["index_price"] else "Unknown"}</i>'
 
-    # Send the data to Telegram group
-    await bot.send_message(
-        chat_id=config.group_chat_id,
-        text=text,
-        parse_mode=ParseMode.HTML,
-    )
+            # Send the data to Telegram group
+            await bot.send_message(
+                chat_id=config.group_chat_id,
+                text=text,
+                parse_mode=ParseMode.HTML,
+            )
+        await asyncio.sleep(5)
 
 def run_bot() -> None:
     # Create two threads to fetch block trade data and send it to Telegram group by using asyncio
     try:
         loop = asyncio.get_event_loop()
-        loop.create_task(fetch_block_trade_data())
-        loop.create_task(send_block_trade_data())
+        loop.create_task(fetch_trade_data())
+        loop.create_task(handle_trade_data())
+        loop.create_task(send_block_trade_to_telegram())
         loop.run_forever()
     except Exception as e:
         logger.error(e)
