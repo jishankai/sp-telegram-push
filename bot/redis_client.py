@@ -30,11 +30,18 @@ class RedisClient:
             item = json.loads(item_str)
             return item
 
-    # stor array in redis with a timeout
-    def put_array(self, array, key, timeout):
+    # store array in redis with a timeout
+    def put_array(self, array, key):
+        self.client.delete(key)
         for item in array:
             self.client.lpush(key, item)
-        self.client.expire(key, timeout)
 
     def get_array(self, key):
         return self.client.lrange(key, 0, -1)
+
+    # store timestamp named timeout in redis
+    def set_bybit_symbols_timeout(self, timeout):
+        self.client.set('bybit_symbols_timeout', timeout)
+
+    def get_bybit_symbols_timeout(self):
+        return self.client.get('bybit_symbols_timeout')

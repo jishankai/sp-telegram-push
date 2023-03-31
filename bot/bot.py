@@ -126,9 +126,10 @@ async def fetch_okx_data(currency):
             redis_client.put(trade, id)
 
 async def fetch_bybit_symbol():
-    # Check if the symbols are already in Redis
-    symbols = redis_client.get_array('bybit_symbols')
-    if symbols:
+    # Get timeout
+    timeout = redis_client.get_bybit_symbols_timeout()
+    if timeout and int(time.time()) < timeout:
+        symbols = redis_client.get_array('bybit_symbols')
         return symbols
     else:
         btcResponse = requests.get(BYBIT_SYMBOL_API, params={
@@ -148,7 +149,8 @@ async def fetch_bybit_symbol():
         # 将btcSymbolList,ethSymbolList数组里的symbol值取出来
         symbols = [symbol["symbol"] for symbol in btcSymbolList] + [symbol["symbol"] for symbol in ethSymbolList]
         # Save the symbols array in Redis and set a timeout
-        redis_client.put_array(symbols, 'bybit_symbols', timeout=600)
+        redis_client.put_array(symbols, 'bybit_symbols')
+        redis_client.set_bybit_symbols_timeout(int(time.time()) + 60*30)
 
         return symbols
 
@@ -212,10 +214,10 @@ def run_bot() -> None:
     # Create two threads to fetch block trade data and send it to Telegram group by using asyncio
     try:
         loop = asyncio.get_event_loop()
-        loop.create_task(fetch_deribit_data())
+        loop.create_task(fetch_deribit_data_all())
         loop.create_task(fetch_okx_data_all())
         loop.create_task(fetch_bybit_data_all())
-        loop.create_task(handle_trade_data_all())
+        loop.create_task(handle_trade_data())
         loop.create_task(send_block_trade_to_telegram())
         loop.run_forever()
     except Exception as e:
