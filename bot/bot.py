@@ -28,7 +28,7 @@ async def fetch_deribit_data(currency):
     response = requests.get(DERIBIT_TRADE_API, params={
         "currency": currency,
         "kind": "option",
-        "count": 200,
+        "count": 500,
         "sorting": "desc",
     })
     data = response.json()
@@ -152,19 +152,19 @@ async def fetch_bybit_symbol():
 
         return symbols
 
-async def fetch_deribit_data():
+async def fetch_deribit_data_all():
     while True:
         await fetch_deribit_data("BTC")
         await fetch_deribit_data("ETH")
         await asyncio.sleep(60)
 
-async def fetch_okx_data():
+async def fetch_okx_data_all():
     while True:
         await fetch_okx_data("BTC")
         await fetch_okx_data("ETH")
         await asyncio.sleep(60)
 
-async def fetch_bybit_data():
+async def fetch_bybit_data_all():
     while True:
         symbols = await fetch_bybit_symbol()
         for symbol in symbols:
@@ -180,9 +180,9 @@ async def handle_trade_data():
             logger.error(f"Pop data from Redis: {data}")
             # Check if the size is >=25 or >=250
             if data["currency"] == "BTC" and float(data["size"]) >= 25:
-                redis_client.put(data, 'block_trade_queue')
+                redis_client.put_item(data, 'block_trade_queue')
             elif data["currency"] == "ETH" and float(data["size"]) >= 250:
-                redis_client.put(data, 'block_trade_queue')
+                redis_client.put_item(data, 'block_trade_queue')
         # Wait for 10 second before fetching data again
         await asyncio.sleep(0.1)
 
@@ -190,7 +190,7 @@ async def handle_trade_data():
 async def send_block_trade_to_telegram():
     while True:
         # Pop data from Redis
-        data = redis_client.get('block_trade_queue')
+        data = redis_client.get_item('block_trade_queue')
         if data:
             direction = data["direction"].upper()
             callOrPut = data["symbol"].split("-")[-1]
@@ -213,9 +213,9 @@ def run_bot() -> None:
     try:
         loop = asyncio.get_event_loop()
         loop.create_task(fetch_deribit_data())
-        loop.create_task(fetch_okx_data())
-        loop.create_task(fetch_bybit_data())
-        loop.create_task(handle_trade_data())
+        loop.create_task(fetch_okx_data_all())
+        loop.create_task(fetch_bybit_data_all())
+        loop.create_task(handle_trade_data_all())
         loop.create_task(send_block_trade_to_telegram())
         loop.run_forever()
     except Exception as e:
