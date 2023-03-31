@@ -20,17 +20,17 @@ class RedisClient:
         return self.client.sismember('trade_set', id)
 
     # store a item with push and pop method in redis
-    def put_item(self, item, key):
+    def put(self, item, key):
         item_str = json.dumps(item)
         self.client.lpush(key, item_str)
 
-    def get_item(self, key):
+    def get(self, key):
         if self.client.llen(key) > 0:
             item_str = self.client.rpop(key)
             item = json.loads(item_str)
             return item
 
-    # store array in redis with a timeout
+    # stor array in redis with a timeout
     def put_array(self, array, key, timeout):
         for item in array:
             self.client.lpush(key, item)
