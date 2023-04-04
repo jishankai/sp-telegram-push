@@ -129,7 +129,7 @@ async def fetch_okx_data(currency):
 async def fetch_bybit_symbol():
     # Get timeout
     timeout = redis_client.get_bybit_symbols_timeout()
-    if timeout and int(time.time()) < timeout:
+    if timeout and int(time.time()) < int(timeout):
         symbols = redis_client.get_array('bybit_symbols')
         return symbols
     else:
@@ -198,8 +198,8 @@ async def send_block_trade_to_telegram():
             direction = data["direction"].upper()
             callOrPut = data["symbol"].split("-")[-1]
             currency = data["currency"]
-            if (data["currency"] == "BTC" and float(data["size"]) >= 250) or (data["currency"] == "ETH" and float(data["size"]) >= 2500):
-                text = f'<i>‼️‼️🔔🔔🔔🔔🔔🔔‼️‼️\n\n<b>📊 {data["source"].upper()}\n🕛 {datetime.fromtimestamp(int(data["timestamp"])//1000)} UTC\n<b>{"🔴" if direction=="SELL" else "🟢"} {direction}\n{"🔶" if currency=="BTC" else "🔷"} {data["symbol"]} {"📈" if callOrPut=="C" else "📉"}</b>\n<b>Price</b>: {data["price"]} {"U" if data["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"}\n<b>Size</b>: {data["size"]} {"₿" if currency=="BTC" else "Ξ"}\n<b>IV</b>: {str(data["iv"])+"%" if data["iv"] else "Unknown"}\n<b>Index Price</b>: {"$"+str(data["index_price"]) if data["index_price"] else "Unknown"}</b></i>'
+            if (data["currency"] == "BTC" and float(data["size"]) >= 1000) or (data["currency"] == "ETH" and float(data["size"]) >= 10000):
+                text = f'<i>‼️‼️🔔🔔🔔🔔🔔🔔‼️‼️\n<b>📊 {data["source"].upper()}\n🕛 {datetime.fromtimestamp(int(data["timestamp"])//1000)} UTC\n<b>{"🔴" if direction=="SELL" else "🟢"} {direction}\n{"🔶" if currency=="BTC" else "🔷"} {data["symbol"]} {"📈" if callOrPut=="C" else "📉"}</b>\n<b>Price</b>: {data["price"]} {"U" if data["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"}\n<b>Size</b>: {data["size"]} {"₿" if currency=="BTC" else "Ξ"} ‼️‼️‼️\n<b>IV</b>: {str(data["iv"])+"%" if data["iv"] else "Unknown"}\n<b>Index Price</b>: {"$"+str(data["index_price"]) if data["index_price"] else "Unknown"}</b></i>'
             else:
                 text = f'<i>📊 {data["source"].upper()}\n🕛 {datetime.fromtimestamp(int(data["timestamp"])//1000)} UTC\n<b>{"🔴" if direction=="SELL" else "🟢"} {direction}\n{"🔶" if currency=="BTC" else "🔷"} {data["symbol"]} {"📈" if callOrPut=="C" else "📉"}</b>\n<b>Price</b>: {data["price"]} {"U" if data["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"}\n<b>Size</b>: {data["size"]} {"₿" if currency=="BTC" else "Ξ"}\n<b>IV</b>: {str(data["iv"])+"%" if data["iv"] else "Unknown"}\n<b>Index Price</b>: {"$"+str(data["index_price"]) if data["index_price"] else "Unknown"}</i>'
 
@@ -220,6 +220,8 @@ def run_bot() -> None:
         loop.create_task(fetch_bybit_data_all())
         loop.create_task(handle_trade_data())
         loop.create_task(send_block_trade_to_telegram())
+        # restart tasks if it failed
+        loop.set_exception_handler(lambda loop, context: loop.create_task(context["future"]))
         loop.run_forever()
     except Exception as e:
         logger.error(e)
