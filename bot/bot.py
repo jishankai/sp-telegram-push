@@ -37,7 +37,7 @@ async def fetch_deribit_data(currency):
     for trade in trades:
         id = f"deribit_{trade['trade_id']}"
         if not redis_client.is_member(id):
-            """ Parse the trade data and return a dict (source, symbol, currency, direction, price, size, iv, index_price, timestamp). The trade data is in the following format:
+            """ Parse the trade data and return a dict (trade_id, source, symbol, currency, direction, price, size, iv, index_price, timestamp). The trade data is in the following format:
             {
             "trade_seq":207
             "trade_id":"ETH-22858667"
@@ -53,6 +53,7 @@ async def fetch_deribit_data(currency):
             }
             """
             trade = {
+                "trade_id": trade["trade_id"],
                 "source": "deribit",
                 "symbol": trade["instrument_name"],
                 "currency": currency,
@@ -75,7 +76,7 @@ async def fetch_bybit_data(symbol):
     for trade in trades:
         id = f"bybit_{trade['execId']}"
         if trade["isBlockTrade"] and not redis_client.is_member(id):
-            """ Parse the trade data and return a dict (source, symbol, currency, direction, price, size, iv, index_price, timestamp). The trade data is in the following format:
+            """ Parse the trade data and return a dict (trade_id, source, symbol, currency, direction, price, size, iv, index_price, timestamp). The trade data is in the following format:
             {
             "symbol": "BTC-24MAR23-26000-P",
             "side": "Sell",
@@ -87,6 +88,7 @@ async def fetch_bybit_data(symbol):
             },
             """
             trade = {
+                "trade_id": trade["execId"],
                 "source": "bybit",
                 "symbol": trade["symbol"],
                 "currency": trade["symbol"].split("-")[0],
@@ -109,10 +111,11 @@ async def fetch_okx_data(currency):
     for trade in trades:
         id = f"okx_{trade['tradeId']}_{trade['ts']}"
         if not redis_client.is_member(id):
-            """ Parse the trade data and return a dict (source, symbol, currency, direction, price, size, iv, index_price, timestamp). The trade data is in the following format:
+            """ Parse the trade data and return a dict (trade_id, source, symbol, currency, direction, price, size, iv, index_price, timestamp). The trade data is in the following format:
             {"fillVol":"0.65430556640625","fwdPx":"1764.388687312925","indexPx":"1764.08","instFamily":"ETH-USD","instId":"ETH-USD-230331-1900-C","markPx":"0.005667868981589025","optType":"C","px":"0.0055","side":"sell","sz":"259","tradeId":"361","ts":"1679882651706"}
             """
             trade = {
+                "trade_id": trade["tradeId"],
                 "source": "okx",
                 "symbol": trade["instId"],
                 "currency": currency,
@@ -157,58 +160,83 @@ async def fetch_bybit_symbol():
 
 async def fetch_deribit_data_all():
     while True:
-        await fetch_deribit_data("BTC")
-        await fetch_deribit_data("ETH")
+        try:
+            await fetch_deribit_data("BTC")
+            await fetch_deribit_data("ETH")
+        except Exception as e:
+            logger.error(f"Error: {e}")
+            continue
+
         await asyncio.sleep(60)
+
 
 async def fetch_okx_data_all():
     while True:
-        await fetch_okx_data("BTC")
-        await fetch_okx_data("ETH")
+        try:
+            await fetch_okx_data("BTC")
+            await fetch_okx_data("ETH")
+        except Exception as e:
+            logger.error(f"Error: {e}")
+            continue
         await asyncio.sleep(60)
 
 async def fetch_bybit_data_all():
     while True:
-        symbols = await fetch_bybit_symbol()
-        for symbol in symbols:
-            await fetch_bybit_data(symbol)
-            await asyncio.sleep(1)
+        try:
+            symbols = await fetch_bybit_symbol()
+            for symbol in symbols:
+                await fetch_bybit_data(symbol)
+                await asyncio.sleep(1)
+        except Exception as e:
+            logger.error(f"Error: {e}")
+            continue
+
+        await asyncio.sleep(60)
 
 # Define a function to pop 'block_trade_queue' data from Redis and if BTC's size>=25 or ETH's size>=250 send it to Telegram group
 async def handle_trade_data():
     while True:
-        # Pop data from Redis
-        data = redis_client.get()
-        if data:
-            logger.error(f"Pop data from Redis: {data}")
-            # Check if the size is >=25 or >=250
-            if data["currency"] == "BTC" and float(data["size"]) >= 25:
-                redis_client.put_item(data, 'block_trade_queue')
-            elif data["currency"] == "ETH" and float(data["size"]) >= 250:
-                redis_client.put_item(data, 'block_trade_queue')
+        try:
+            # Pop data from Redis
+            data = redis_client.get()
+            if data:
+                logger.error(f"Pop data from Redis: {data}")
+                # Check if the size is >=25 or >=250
+                if data["currency"] == "BTC" and float(data["size"]) >= 25:
+                    redis_client.put_item(data, 'block_trade_queue')
+                elif data["currency"] == "ETH" and float(data["size"]) >= 250:
+                    redis_client.put_item(data, 'block_trade_queue')
+        except Exception as e:
+            logger.error(f"Error: {e}")
+            continue
         # Wait for 10 second before fetching data again
         await asyncio.sleep(0.1)
 
 # Define a function to send the data with prettify format to Telegram group
 async def send_block_trade_to_telegram():
     while True:
-        # Pop data from Redis
-        data = redis_client.get_item('block_trade_queue')
-        if data:
-            direction = data["direction"].upper()
-            callOrPut = data["symbol"].split("-")[-1]
-            currency = data["currency"]
-            if (data["currency"] == "BTC" and float(data["size"]) >= 1000) or (data["currency"] == "ETH" and float(data["size"]) >= 10000):
-                text = f'<i>‼️‼️🔔🔔🔔🔔🔔🔔‼️‼️\n<b>📊 {data["source"].upper()}\n🕛 {datetime.fromtimestamp(int(data["timestamp"])//1000)} UTC\n<b>{"🔴" if direction=="SELL" else "🟢"} {direction}\n{"🔶" if currency=="BTC" else "🔷"} {data["symbol"]} {"📈" if callOrPut=="C" else "📉"}</b>\n<b>Price</b>: {data["price"]} {"U" if data["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"}\n<b>Size</b>: {data["size"]} {"₿" if currency=="BTC" else "Ξ"} ‼️‼️‼️\n<b>IV</b>: {str(data["iv"])+"%" if data["iv"] else "Unknown"}\n<b>Index Price</b>: {"$"+str(data["index_price"]) if data["index_price"] else "Unknown"}</b></i>'
-            else:
-                text = f'<i>📊 {data["source"].upper()}\n🕛 {datetime.fromtimestamp(int(data["timestamp"])//1000)} UTC\n<b>{"🔴" if direction=="SELL" else "🟢"} {direction}\n{"🔶" if currency=="BTC" else "🔷"} {data["symbol"]} {"📈" if callOrPut=="C" else "📉"}</b>\n<b>Price</b>: {data["price"]} {"U" if data["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"}\n<b>Size</b>: {data["size"]} {"₿" if currency=="BTC" else "Ξ"}\n<b>IV</b>: {str(data["iv"])+"%" if data["iv"] else "Unknown"}\n<b>Index Price</b>: {"$"+str(data["index_price"]) if data["index_price"] else "Unknown"}</i>'
+        try:
+            # Pop data from Redis
+            data = redis_client.get_item('block_trade_queue')
+            if data:
+                direction = data["direction"].upper()
+                callOrPut = data["symbol"].split("-")[-1]
+                currency = data["currency"]
+                if (data["currency"] == "BTC" and float(data["size"]) >= 1000) or (data["currency"] == "ETH" and float(data["size"]) >= 10000):
+                    text = f'<i>‼️‼️🔔🔔🔔🔔🔔🔔‼️‼️\n<b>📊 {data["source"].upper()}\n🕛 {datetime.fromtimestamp(int(data["timestamp"])//1000)} UTC\n<b>{"🔴" if direction=="SELL" else "🟢"} {direction}\n{"🔶" if currency=="BTC" else "🔷"} {data["symbol"]} {"📈" if callOrPut=="C" else "📉"}</b>\n<b>Price</b>: {data["price"]} {"U" if data["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"} (${data["price"] if data["source"].upper()=="BYBIT" else float(data["price"])*float(data["index_price"]):,.2f})\n<b>Size</b>: {data["size"]} {"₿" if currency=="BTC" else "Ξ"} (${float(data["size"])*float(data["index_price"]):,.2f}K) ‼️‼️‼️\n<b>IV</b>: {str(data["iv"])+"%" if data["iv"] else "Unknown"}\n<b>Index Price</b>: {"$"+str(data["index_price"]) if data["index_price"] else "Unknown"}\n<b>Trade Id</b>:{data["trade_id"]}</b></i>'
+                else:
+                    text = f'<i>📊 {data["source"].upper()}\n🕛 {datetime.fromtimestamp(int(data["timestamp"])//1000)} UTC\n<b>{"🔴" if direction=="SELL" else "🟢"} {direction}\n{"🔶" if currency=="BTC" else "🔷"} {data["symbol"]} {"📈" if callOrPut=="C" else "📉"}</b>\n<b>Price</b>: {data["price"]} {"U" if data["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"} (${data["price"] if data["source"].upper()=="BYBIT" else float(data["price"])*float(data["index_price"]):,.2f})\n<b>Size</b>: {data["size"]} {"₿" if currency=="BTC" else "Ξ"} (${float(data["size"])*float(data["index_price"]):,.2f}K)\n<b>IV</b>: {str(data["iv"])+"%" if data["iv"] else "Unknown"}\n<b>Index Price</b>: {"$"+str(data["index_price"]) if data["index_price"] else "Unknown"}\n<b>Trade Id</b>:{data["trade_id"]}</b></i>'
 
-            # Send the data to Telegram group
-            await bot.send_message(
-                chat_id=config.group_chat_id,
-                text=text,
-                parse_mode=ParseMode.HTML,
-            )
+                # Send the data to Telegram group
+                await bot.send_message(
+                    chat_id=config.group_chat_id,
+                    text=text,
+                    parse_mode=ParseMode.HTML,
+                )
+        except Exception as e:
+            logger.error(f"Error: {e}")
+            continue
+        # Wait for 5 second before fetching data again
         await asyncio.sleep(5)
 
 def run_bot() -> None:
@@ -220,8 +248,6 @@ def run_bot() -> None:
         loop.create_task(fetch_bybit_data_all())
         loop.create_task(handle_trade_data())
         loop.create_task(send_block_trade_to_telegram())
-        # restart tasks if it failed
-        loop.set_exception_handler(lambda loop, context: loop.create_task(context["future"]))
         loop.run_forever()
     except Exception as e:
         logger.error(e)
