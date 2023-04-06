@@ -2,9 +2,10 @@ import logging
 import traceback
 import json
 import requests
-from datetime import datetime, timezone
+from datetime import datetime
 import asyncio
 import time
+from prettytable import PrettyTable
 
 import telegram
 from telegram.constants import ParseMode, ChatAction
@@ -240,35 +241,40 @@ async def push_block_trade_to_telegram():
             # Pop data from Redis
             id = redis_client.get_block_trade_id()
             if id and redis_client.get_block_trade_len(id) > 0:
-                text = "<b><i>🔔Block Trade🔔️ 📊 DERIBIT</i></b>\n"
+                text = "<b><i>📊 DERIBIT</i></b>\n"
+                table = PrettyTable()
                 is_first_record = False
                 while redis_client.get_block_trade_len(id) > 0:
                     data = redis_client.get_block_trade(id)
                     if data:
                         if not is_first_record:
                             text += f'<i>🕛 {datetime.fromtimestamp(int(data["timestamp"])//1000)} UTC <b>{id.decode("utf-8")}</b></i>'
-                            text += '<pre>\n'
-                            text += '||Instrument|Price|Size|IV|Index Price|\n'
-                            text += '|:---:|:---:|---:|---:|---:|---:|\n'
+                            table.field_names = ["", "Instrument", "Price", "Size", "IV", "Index Price"]
                             is_first_record = True
                         direction = data["direction"].upper()
                         callOrPut = data["symbol"].split("-")[-1]
                         currency = data["currency"]
                         if callOrPut == "C" or callOrPut == "P":
-                            text += f'|{"🔴" if direction=="SELL" else "🟢"} {direction}'
-                            text += f'|{"🔶" if currency=="BTC" else "🔷"} {data["symbol"]} {"📈" if callOrPut=="C" else "📉"}'
-                            text += f'|{data["price"]} {"U" if data["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"} (${data["price"] if data["source"].upper()=="BYBIT" else float(data["price"])*float(data["index_price"]):,.2f})'
-                            text += f'|{data["size"]} {"₿" if currency=="BTC" else "Ξ"} (${float(data["size"])*float(data["index_price"])/1000:,.2f}K){" ‼️‼️" if (data["currency"] == "BTC" and float(data["size"]) >= 1000) or (data["currency"] == "ETH" and float(data["size"]) >= 10000) else ""}'
-                            text += f'|{str(data["iv"])+"%"}'
-                            text += f'|{"$"+str(data["index_price"])}|\n'
+                            table.add_row([
+                                f'{"🔴" if direction=="SELL" else "🟢"} {direction}',
+                                f'{"🔶" if currency=="BTC" else "🔷"} {data["symbol"]} {"📈" if callOrPut=="C" else "📉"}',
+                                f'{data["price"]} {"U" if data["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"} (${data["price"] if data["source"].upper()=="BYBIT" else float(data["price"])*float(data["index_price"]):,.2f})',
+                                f'{data["size"]} {"₿" if currency=="BTC" else "Ξ"} (${float(data["size"])*float(data["index_price"])/1000:,.2f}K){" ‼️‼️" if (data["currency"] == "BTC" and float(data["size"]) >= 1000) or (data["currency"] == "ETH" and float(data["size"]) >= 10000) else ""}',
+                                f'{str(data["iv"])+"%"}',
+                                f'|{"$"+str(data["index_price"])}'
+                            ])
                         else:
-                            text += f'|{"🔴" if direction=="SELL" else "🟢"} {direction}'
-                            text += f'|{"🔶" if currency=="BTC" else "🔷"} {data["symbol"]}'
-                            text += f'|{data["price"]} {"U" if data["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"} (${data["price"] if data["source"].upper()=="BYBIT" else float(data["price"])*float(data["index_price"]):,.2f})'
-                            text += f'|{data["price"]} {"U" if data["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"} (${data["price"] if data["source"].upper()=="BYBIT" else float(data["price"])*float(data["index_price"]):,.2f})'
-                            text += f'|'
-                            text += f'|{"$"+str(data["index_price"])}|\n'
+                            table.add_row([
+                                f'{"🔴" if direction=="SELL" else "🟢"} {direction}',
+                                f'{"🔶" if currency=="BTC" else "🔷"} {data["symbol"]}',
+                                f'{data["price"]} {"U" if data["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"} (${data["price"] if data["source"].upper()=="BYBIT" else float(data["price"])*float(data["index_price"]):,.2f})',
+                                f'{data["price"]} {"U" if data["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"} (${data["price"] if data["source"].upper()=="BYBIT" else float(data["price"])*float(data["index_price"]):,.2f})',
+                                f'',
+                                f'{"$"+str(data["index_price"])}'
+                            ])
                     await asyncio.sleep(0.1)
+                text += '<pre>'
+                text += table.get_string()
                 text += '</pre>'
                 text += f'<i>#block</i>'
 
@@ -294,18 +300,20 @@ async def push_trade_to_telegram():
                 direction = data["direction"].upper()
                 callOrPut = data["symbol"].split("-")[-1]
                 currency = data["currency"]
+                table = PrettyTable()
                 text = '<b><i>📊 {data["source"].upper()}</i></b>\n'
                 text += f'<i>🕛 {datetime.fromtimestamp(int(data["timestamp"])//1000)} UTC <b>{data["trade_id"]}</b></i>'
-                text += '<pre>\n'
-                text += '||Instrument|Price|Size|IV|Index Price|\n'
-                text += '|:---:|:---:|---:|---:|---:|---:|\n'
-                text += f'|{"🔴" if direction=="SELL" else "🟢"} {direction}'
-                text += f'|{"🔶" if currency=="BTC" else "🔷"} {data["symbol"]} {"📈" if callOrPut=="C" else "📉"}'
-                text += f'|{data["price"]} {"U" if data["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"} (${data["price"] if data["source"].upper()=="BYBIT" else float(data["price"])*float(data["index_price"]):,.2f})'
-                text += f'|{data["size"]} {"₿" if currency=="BTC" else "Ξ"} (${float(data["size"])*float(data["index_price"])/1000:,.2f}K){" ‼️‼️" if (data["currency"] == "BTC" and float(data["size"]) >= 1000) or (data["currency"] == "ETH" and float(data["size"]) >= 10000) else ""}'
-
-                text += f'|{str(data["iv"])+"%" if data["iv"] else ""}'
-                text += f'|{"$"+str(data["index_price"]) if data["index_price"] else ""}|\n'
+                table.field_names = ["", "Instrument", "Price", "Size", "IV", "Index Price"]
+                table.add_row([
+                    f'{"🔴" if direction=="SELL" else "🟢"} {direction}',
+                    f'{"🔶" if currency=="BTC" else "🔷"} {data["symbol"]} {"📈" if callOrPut=="C" else "📉"}',
+                    f'{data["price"]} {"U" if data["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"} (${data["price"] if data["source"].upper()=="BYBIT" else float(data["price"])*float(data["index_price"]):,.2f})',
+                    f'{data["size"]} {"₿" if currency=="BTC" else "Ξ"} (${float(data["size"])*float(data["index_price"])/1000:,.2f}K){" ‼️‼️" if (data["currency"] == "BTC" and float(data["size"]) >= 1000) or (data["currency"] == "ETH" and float(data["size"]) >= 10000) else ""}',
+                    f'{str(data["iv"])+"%" if data["iv"] else ""}',
+                    f'{"$"+str(data["index_price"]) if data["index_price"] else ""}'
+                ])
+                text += '<pre>'
+                text += table.get_string()
                 text += '</pre>'
                 if data["liquidation"]:
                     text += f'<i>#liquidation</i>'
