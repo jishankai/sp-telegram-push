@@ -240,7 +240,7 @@ async def push_block_trade_to_telegram():
             # Pop data from Redis
             id = redis_client.get_block_trade_id()
             if id and redis_client.get_block_trade_len(id) > 0:
-                text = "<b><i>📊 DERIBIT {id.decode('utf-8')}</i></b>\n"
+                text = f"<b><i>📊 DERIBIT {id.decode('utf-8')}</i></b>\n"
                 is_first_record = False
                 while redis_client.get_block_trade_len(id) > 0:
                     data = redis_client.get_block_trade(id)
@@ -263,8 +263,8 @@ async def push_block_trade_to_telegram():
                             text += '\n'
                             text += f'{"🔴" if direction=="SELL" else "🟢"} {direction} '
                             text += f'{"🔶" if currency=="BTC" else "🔷"} {data["symbol"]} '
-                            text += f'at {data["price"]} {"U" if data["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"} (${data["price"] if data["source"].upper()=="BYBIT" else float(data["price"])*float(data["index_price"]):,.2f}) '
-                            text += f'<b>Size</b>: {data["size"]} {"₿" if currency=="BTC" else "Ξ"} (${float(data["size"])*float(data["index_price"])/1000:,.2f}K) '
+                            text += f'at ${float(data["price"]):,.2f} '
+                            text += f'<b>Size</b>: {float(data["size"]) /1000:,.2f}K) '
                             text += f'<b>Index Price</b>: {"$"+str(data["index_price"])}'
                     await asyncio.sleep(0.1)
                 text += '\n'
