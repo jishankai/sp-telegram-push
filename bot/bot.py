@@ -35,7 +35,11 @@ async def fetch_deribit_data(currency):
     data = response.json()
     trades = data["result"]["trades"]
     for trade in trades:
-        id = f"deribit_{trade['block_trade_id'] if 'block_trade_id' in trade else trade['trade_id']}"
+        if "block_trade_id" in trade:
+            id = f"deribit_{trade['block_trade_id']}"
+        else:
+            id = f"deribit_{trade['trade_id']}"
+
         if not redis_client.is_trade_member(id):
             """ Parse the trade data and return a dict (trade_id, source, symbol, currency, direction, price, size, iv, index_price, block_trade_id, liquidation, timestamp). The trade data is in the following format:
             {
@@ -55,8 +59,9 @@ async def fetch_deribit_data(currency):
             }
             """
             if "block_trade_id" in trade:
+                trade_id = trade["block_trade_id"]
                 trade = {
-                    "trade_id": trade["block_trade_id"],
+                    "trade_id": trade_id,
                     "source": "deribit",
                     "symbol": trade["instrument_name"],
                     "currency": currency,
@@ -68,9 +73,9 @@ async def fetch_deribit_data(currency):
                     "liquidation": True if "liquidation" in trade else False,
                     "timestamp": trade["timestamp"],
                 }
-                if not redis_client.is_block_trade_id_member(trade["block_trade_id"]):
-                    redis_client.put_block_trade_id(trade["block_trade_id"])
-                redis_client.put_block_trade(trade, trade["block_trade_id"])
+                if not redis_client.is_block_trade_id_member(trade_id):
+                    redis_client.put_block_trade_id(trade_id)
+                redis_client.put_block_trade(trade, trade_id)
             elif 'iv' in trade:
                 trade = {
                     "trade_id": trade["trade_id"],
