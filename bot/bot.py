@@ -36,7 +36,7 @@ async def fetch_deribit_data(currency):
     data = response.json()
     trades = data["result"]["trades"]
     for trade in trades:
-        id = f"deribit_{trade['trade_id']}"
+        id = trade['trade_id']
         if not redis_client.is_trade_member(id):
             """ Parse the trade data and return a dict (trade_id, source, symbol, currency, direction, price, size, iv, index_price, block_trade_id, liquidation, timestamp). The trade data is in the following format:
             {
