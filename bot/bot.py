@@ -5,7 +5,7 @@ import requests
 from datetime import datetime
 import asyncio
 import time
-from prettytable import PrettyTable
+from prettytable import PrettyTable, PLAIN_COLUMNS
 
 import telegram
 from telegram.constants import ParseMode, ChatAction
@@ -279,6 +279,7 @@ async def push_block_trade_to_telegram():
                             ])
                     await asyncio.sleep(0.1)
                 text += '<pre>'
+                table.set_style(PLAIN_COLUMNS)
                 text += table.get_string()
                 text += '</pre>'
                 text += '\n'
@@ -324,10 +325,11 @@ async def push_trade_to_telegram():
                     f'{"$"+str(data["index_price"]) if data["index_price"] else ""}'
                 ])
                 text += '<pre>'
+                table.set_style(PLAIN_COLUMNS)
                 text += table.get_string()
                 text += '</pre>'
                 text += '\n'
-                if data["liquidation"]:
+                if "liquidation" in data and data["liquidation"]:
                     text += f'<i>#liquidation</i>'
                 else:
                     text += f'<i>#onscreen</i>'
