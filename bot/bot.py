@@ -224,9 +224,9 @@ async def handle_trade_data():
                 logger.error(f"Pop data from Redis: {data}")
                 # Check if the size is >=25 or >=250
                 if data["currency"] == "BTC" and float(data["size"]) >= 25:
-                    redis_client.put_item(data, 'trade_queue')
+                    redis_client.put_item(data, 'bigsize_trade_queue')
                 elif data["currency"] == "ETH" and float(data["size"]) >= 250:
-                    redis_client.put_item(data, 'trade_queue')
+                    redis_client.put_item(data, 'bigsize_trade_queue')
         except Exception as e:
             logger.error(f"Error: {e}")
             continue
@@ -277,7 +277,7 @@ async def push_trade_to_telegram():
     while True:
         try:
             # Pop data from Redis
-            data = redis_client.get_item('trade_queue')
+            data = redis_client.get_item('bigsize_trade_queue')
             if data:
                 direction = data["direction"].upper()
                 callOrPut = data["symbol"].split("-")[-1]
