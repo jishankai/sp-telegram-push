@@ -54,23 +54,36 @@ async def fetch_deribit_data(currency):
             "liquidation":"M"
             }
             """
-            trade = {
-                "trade_id": trade["block_trade_id"] if "block_trade_id" in trade else trade["trade_id"],
-                "source": "deribit",
-                "symbol": trade["instrument_name"],
-                "currency": currency,
-                "direction": trade["direction"],
-                "price": trade["price"],
-                "size": trade["amount"],
-                "iv": trade["iv"] if "iv" in trade else None,
-                "index_price": trade["index_price"],
-                "liquidation": True if "liquidation" in trade else False,
-                "timestamp": trade["timestamp"],
-            }
             if "block_trade_id" in trade:
+                trade = {
+                    "trade_id": trade["block_trade_id"] if "block_trade_id" in trade else trade["trade_id"],
+                    "source": "deribit",
+                    "symbol": trade["instrument_name"],
+                    "currency": currency,
+                    "direction": trade["direction"],
+                    "price": trade["price"],
+                    "size": trade["amount"],
+                    "iv": trade["iv"] if "iv" in trade else None,
+                    "index_price": trade["index_price"],
+                    "liquidation": True if "liquidation" in trade else False,
+                    "timestamp": trade["timestamp"],
+                }
                 redis_client.put_block_trade_id(id)
                 redis_client.put_block_trade(trade, id)
-            else:
+            elif 'iv' in trade:
+                trade = {
+                    "trade_id": trade["block_trade_id"] if "block_trade_id" in trade else trade["trade_id"],
+                    "source": "deribit",
+                    "symbol": trade["instrument_name"],
+                    "currency": currency,
+                    "direction": trade["direction"],
+                    "price": trade["price"],
+                    "size": trade["amount"],
+                    "iv": trade["iv"],
+                    "index_price": trade["index_price"],
+                    "liquidation": True if "liquidation" in trade else False,
+                    "timestamp": trade["timestamp"],
+                }
                 redis_client.put_trade(trade, id)
 
 async def fetch_bybit_data(symbol):
