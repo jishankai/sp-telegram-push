@@ -2,7 +2,7 @@ import logging
 import traceback
 import json
 import requests
-from datetime import datetime
+from datetime import datetime, timezone
 import asyncio
 import time
 
@@ -246,7 +246,7 @@ async def push_block_trade_to_telegram():
                     data = redis_client.get_block_trade(id)
                     if data:
                         if not is_first_record:
-                            text += f'<i>🕛 {datetime.fromtimestamp(int(data["timestamp"])//1000).astimezone(timezone("Asia/Shanghai"))} CST <b>{id.decode("utf-8")}</b></i>\n'
+                            text += f'<i>🕛 {datetime.fromtimestamp(int(data["timestamp"])//1000)} UTC <b>{id.decode("utf-8")}</b></i>\n'
                             text += '<table><tr><th></th><th>Instrument<th/><th>Price</th><th>Size</th><th>IV</th><th>Index Price</th></tr>'
                             is_first_record = True
                         direction = data["direction"].upper()
@@ -293,7 +293,7 @@ async def push_trade_to_telegram():
                 callOrPut = data["symbol"].split("-")[-1]
                 currency = data["currency"]
                 text = '<b><i>📊 {data["source"].upper()}</i></b>\n'
-                text += f'<i>🕛 {datetime.fromtimestamp(int(data["timestamp"])//1000).astimezone(timezone("Asia/Shanghai"))} CST <b>{data["trade_id"]}</b></i>\n'
+                text += f'<i>🕛 {datetime.fromtimestamp(int(data["timestamp"])//1000)} UTC <b>{data["trade_id"]}</b></i>\n'
                 text += '<table><tr><th></th><th>Instrument<th/><th>Price</th><th>Size</th><th>IV</th><th>Index Price</th></tr>'
                 text += f'<tr><td>{"🔴" if direction=="SELL" else "🟢"} {direction}</td>'
                 text += f'<td>{"🔶" if currency=="BTC" else "🔷"} {data["symbol"]} {"📈" if callOrPut=="C" else "📉"}</td>'
