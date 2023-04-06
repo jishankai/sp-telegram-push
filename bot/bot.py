@@ -241,7 +241,6 @@ async def push_block_trade_to_telegram():
             id = redis_client.get_block_trade_id()
             if id and redis_client.get_block_trade_len(id) > 0:
                 text = "<b><i>📊 DERIBIT</i></b>\n"
-                table = PrettyTable()
                 is_first_record = False
                 while redis_client.get_block_trade_len(id) > 0:
                     data = redis_client.get_block_trade(id)
