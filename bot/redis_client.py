@@ -55,6 +55,11 @@ class RedisClient:
             block_trade_id = self.client.rpop('block_trade_id_queue')
             return block_trade_id
 
+    def is_block_trade_id_member(self, block_trade_id):
+        id_list = self.client.lrange('block_trade_id_queue', 0, -1)
+        return block_trade_id in id_list
+
+
     def put_block_trade(self, block_trade, id):
         block_trade_str = json.dumps(block_trade)
         self.client.lpush(id, block_trade_str)
