@@ -249,7 +249,12 @@ async def push_block_trade_to_telegram():
                     if data:
                         if not is_first_record:
                             text += f'<i>🕛 {datetime.fromtimestamp(int(data["timestamp"])//1000)} UTC <b>{id.decode("utf-8")}</b></i>'
+                            text += '\n'
                             table.field_names = ["", "Instrument", "Price", "Size", "IV", "Index Price"]
+                            table.align["Pirce"] = "r"
+                            table.align["Size"] = "r"
+                            table.align["IV"] = "r"
+                            table.align["Index Price"] = "r"
                             is_first_record = True
                         direction = data["direction"].upper()
                         callOrPut = data["symbol"].split("-")[-1]
@@ -261,7 +266,7 @@ async def push_block_trade_to_telegram():
                                 f'{data["price"]} {"U" if data["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"} (${data["price"] if data["source"].upper()=="BYBIT" else float(data["price"])*float(data["index_price"]):,.2f})',
                                 f'{data["size"]} {"₿" if currency=="BTC" else "Ξ"} (${float(data["size"])*float(data["index_price"])/1000:,.2f}K){" ‼️‼️" if (data["currency"] == "BTC" and float(data["size"]) >= 1000) or (data["currency"] == "ETH" and float(data["size"]) >= 10000) else ""}',
                                 f'{str(data["iv"])+"%"}',
-                                f'|{"$"+str(data["index_price"])}'
+                                f'{"$"+str(data["index_price"])}'
                             ])
                         else:
                             table.add_row([
@@ -276,6 +281,7 @@ async def push_block_trade_to_telegram():
                 text += '<pre>'
                 text += table.get_string()
                 text += '</pre>'
+                text += '\n'
                 text += f'<i>#block</i>'
 
                 # Send the data to Telegram group
@@ -303,7 +309,12 @@ async def push_trade_to_telegram():
                 table = PrettyTable()
                 text = '<b><i>📊 {data["source"].upper()}</i></b>\n'
                 text += f'<i>🕛 {datetime.fromtimestamp(int(data["timestamp"])//1000)} UTC <b>{data["trade_id"]}</b></i>'
+                text += '\n'
                 table.field_names = ["", "Instrument", "Price", "Size", "IV", "Index Price"]
+                table.align["Pirce"] = "r"
+                table.align["Size"] = "r"
+                table.align["IV"] = "r"
+                table.align["Index Price"] = "r"
                 table.add_row([
                     f'{"🔴" if direction=="SELL" else "🟢"} {direction}',
                     f'{"🔶" if currency=="BTC" else "🔷"} {data["symbol"]} {"📈" if callOrPut=="C" else "📉"}',
@@ -315,6 +326,7 @@ async def push_trade_to_telegram():
                 text += '<pre>'
                 text += table.get_string()
                 text += '</pre>'
+                text += '\n'
                 if data["liquidation"]:
                     text += f'<i>#liquidation</i>'
                 else:
