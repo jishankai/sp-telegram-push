@@ -62,7 +62,7 @@ async def fetch_deribit_data(currency):
                 "direction": trade["direction"],
                 "price": trade["price"],
                 "size": trade["amount"],
-                "iv": trade["iv"],
+                "iv": trade["iv"] if "iv" in trade else None,
                 "index_price": trade["index_price"],
                 "liquidation": True if "liquidation" in trade else False,
                 "timestamp": trade["timestamp"],
