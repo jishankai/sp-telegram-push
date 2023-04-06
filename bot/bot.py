@@ -240,14 +240,13 @@ async def push_block_trade_to_telegram():
             # Pop data from Redis
             id = redis_client.get_block_trade_id()
             if id and redis_client.get_block_trade_len(id) > 0:
-                text = "<b><i>📊 DERIBIT</i></b>\n"
+                text = "<b><i>📊 DERIBIT {id.decode('utf-8')}</i></b>\n"
                 is_first_record = False
                 while redis_client.get_block_trade_len(id) > 0:
                     data = redis_client.get_block_trade(id)
                     if data:
                         if not is_first_record:
                             text += f'<i>🕛 {datetime.fromtimestamp(int(data["timestamp"])//1000)} UTC</i>'
-                            text += f'<b>ID: {id.decode("utf-8")}</b></i>'
                             is_first_record = True
                         direction = data["direction"].upper()
                         callOrPut = data["symbol"].split("-")[-1]
@@ -293,8 +292,9 @@ async def push_trade_to_telegram():
                 direction = data["direction"].upper()
                 callOrPut = data["symbol"].split("-")[-1]
                 currency = data["currency"]
-                text = f'<b><i>📊 {data["source"].upper()}</i></b>\n'
-                text += f'<i>🕛 {datetime.fromtimestamp(int(data["timestamp"])//1000)} UTC <b>{data["trade_id"]}</b></i>'
+                text = f'<b><i>📊 {data["source"].upper()} {data["trade_id"]}</i></b>'
+                text += '\n'
+                text += f'<i>🕛 {datetime.fromtimestamp(int(data["timestamp"])//1000)} UTC</i>'
                 text += '\n'
                 text += f'{"🔴" if direction=="SELL" else "🟢"} {direction} '
                 text += f'{"🔶" if currency=="BTC" else "🔷"} {data["symbol"]} {"📈" if callOrPut=="C" else "📉"} '
