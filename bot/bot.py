@@ -250,7 +250,7 @@ async def push_block_trade_to_telegram():
                         if not is_first_record:
                             text += f'<i>🕛 {datetime.fromtimestamp(int(data["timestamp"])//1000)} UTC <b>{id.decode("utf-8")}</b></i>'
                             text += '\n'
-                            table.field_names = ["", "Instrument", "Price", "Size", "IV", "Index Price"]
+                            table.field_names = ["🔔", "🔶Instrument🔷", "Price", "Size", "IV", "Index Price"]
                             table.align["Pirce"] = "r"
                             table.align["Size"] = "r"
                             table.align["IV"] = "r"
@@ -307,10 +307,10 @@ async def push_trade_to_telegram():
                 callOrPut = data["symbol"].split("-")[-1]
                 currency = data["currency"]
                 table = PrettyTable()
-                text = '<b><i>📊 {data["source"].upper()}</i></b>\n'
+                text = f'<b><i>📊 {data["source"].upper()}</i></b>\n'
                 text += f'<i>🕛 {datetime.fromtimestamp(int(data["timestamp"])//1000)} UTC <b>{data["trade_id"]}</b></i>'
                 text += '\n'
-                table.field_names = ["", "Instrument", "Price", "Size", "IV", "Index Price"]
+                table.field_names = ["🔔", "🔶Instrument🔷", "Price", "Size", "IV", "Index Price"]
                 table.align["Pirce"] = "r"
                 table.align["Size"] = "r"
                 table.align["IV"] = "r"
