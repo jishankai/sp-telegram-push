@@ -68,12 +68,12 @@ async def fetch_deribit_data(currency):
                     "liquidation": True if "liquidation" in trade else False,
                     "timestamp": trade["timestamp"],
                 }
-                if not redis_client.is_block_trade_id_member(id):
-                    redis_client.put_block_trade_id(id)
-                redis_client.put_block_trade(trade, id)
+                if not redis_client.is_block_trade_id_member(trade["block_trade_id"]):
+                    redis_client.put_block_trade_id(trade["block_trade_id"])
+                redis_client.put_block_trade(trade, trade["block_trade_id"])
             elif 'iv' in trade:
                 trade = {
-                    "trade_id": trade["block_trade_id"] if "block_trade_id" in trade else trade["trade_id"],
+                    "trade_id": trade["trade_id"],
                     "source": "deribit",
                     "symbol": trade["instrument_name"],
                     "currency": currency,
@@ -241,8 +241,8 @@ async def push_block_trade_to_telegram():
             if id:
                 text = "<b><i>🔔Block Trade🔔️ 📊 DERIBIT\n</i></b>"
                 while redis_client.get_block_trade_len(id) > 0:
-                    blockTrade = redis_client.get_block_trade(id)
-                    if blockTrade:
+                    data = redis_client.get_block_trade(id)
+                    if data:
                         direction = data["direction"].upper()
                         callOrPut = data["symbol"].split("-")[-1]
                         currency = data["currency"]
@@ -258,7 +258,7 @@ async def push_block_trade_to_telegram():
                                 text += f'<i>🕛 {datetime.fromtimestamp(int(data["timestamp"])//1000)} UTC <b>{"🔴" if direction=="SELL" else "🟢"} {direction} {"🔶" if currency=="BTC" else "🔷"} {data["symbol"]} <b>Price</b>: {data["price"]} {"U" if data["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"} (${data["price"] if data["source"].upper()=="BYBIT" else float(data["price"])*float(data["index_price"]):,.2f}) <b>Size</b>: {data["size"]} {"₿" if currency=="BTC" else "Ξ"} (${float(data["size"])*float(data["index_price"])/1000:,.2f}K) <b>Index Price</b>: {"$"+str(data["index_price"]) if data["index_price"] else "Unknown"}</i>'
                     await asyncio.sleep(0.1)
 
-                text += f'\n<i><b>Trade Id: {data["trade_id"]}</b>\n#block</i>'
+                text += f'\n<i><b>Trade Id: {id}</b>\n#block</i>'
 
                 # Send the data to Telegram group
                 await bot.send_message(
