@@ -68,7 +68,7 @@ async def fetch_deribit_data(currency):
                     "liquidation": True if "liquidation" in trade else False,
                     "timestamp": trade["timestamp"],
                 }
-                if not redis_client.is_block_trade_member(id):
+                if not redis_client.is_block_trade_id_member(id):
                     redis_client.put_block_trade_id(id)
                 redis_client.put_block_trade(trade, id)
             elif 'iv' in trade:
