@@ -245,10 +245,13 @@ async def push_block_trade_to_telegram():
             id = redis_client.get_block_trade_id()
             if id and redis_client.get_block_trade_len(id) > 0:
                 text = "<b><i>🔔Block Trade🔔️ 📊 DERIBIT</i></b>\n"
-                text += f'<i>🕛 {datetime.fromtimestamp(int(data["timestamp"])//1000)} UTC</i>\n'
+                isTimeSet = False
                 while redis_client.get_block_trade_len(id) > 0:
                     data = redis_client.get_block_trade(id)
                     if data:
+                        if not isTimeSet:
+                            text += f'<i>🕛 {datetime.fromtimestamp(int(data["timestamp"])//1000)} UTC</i>\n'
+                            isTimeSet = True
                         direction = data["direction"].upper()
                         callOrPut = data["symbol"].split("-")[-1]
                         currency = data["currency"]
