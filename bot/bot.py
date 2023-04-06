@@ -5,7 +5,7 @@ import requests
 from datetime import datetime
 import asyncio
 import time
-from prettytable import PrettyTable, PLAIN_COLUMNS
+from prettytable import PrettyTable
 
 import telegram
 from telegram.constants import ParseMode, ChatAction
@@ -261,8 +261,8 @@ async def push_block_trade_to_telegram():
                         currency = data["currency"]
                         if callOrPut == "C" or callOrPut == "P":
                             table.add_row([
-                                f'{"🔴" if direction=="SELL" else "🟢"} {direction}',
-                                f'{"🔶" if currency=="BTC" else "🔷"} {data["symbol"]} {"📈" if callOrPut=="C" else "📉"}',
+                                f'{"🔴" if direction=="SELL" else "🟢"}{direction}',
+                                f'{"🔶" if currency=="BTC" else "🔷"}{data["symbol"]}{"📈" if callOrPut=="C" else "📉"}',
                                 f'{data["price"]} {"U" if data["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"} (${data["price"] if data["source"].upper()=="BYBIT" else float(data["price"])*float(data["index_price"]):,.2f})',
                                 f'{data["size"]} {"₿" if currency=="BTC" else "Ξ"} (${float(data["size"])*float(data["index_price"])/1000:,.2f}K){" ‼️‼️" if (data["currency"] == "BTC" and float(data["size"]) >= 1000) or (data["currency"] == "ETH" and float(data["size"]) >= 10000) else ""}',
                                 f'{str(data["iv"])+"%"}',
@@ -270,8 +270,8 @@ async def push_block_trade_to_telegram():
                             ])
                         else:
                             table.add_row([
-                                f'{"🔴" if direction=="SELL" else "🟢"} {direction}',
-                                f'{"🔶" if currency=="BTC" else "🔷"} {data["symbol"]}',
+                                f'{"🔴" if direction=="SELL" else "🟢"}{direction}',
+                                f'{"🔶" if currency=="BTC" else "🔷"}{data["symbol"]}',
                                 f'{data["price"]} {"U" if data["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"} (${data["price"] if data["source"].upper()=="BYBIT" else float(data["price"])*float(data["index_price"]):,.2f})',
                                 f'{data["price"]} {"U" if data["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"} (${data["price"] if data["source"].upper()=="BYBIT" else float(data["price"])*float(data["index_price"]):,.2f})',
                                 f'',
@@ -279,7 +279,6 @@ async def push_block_trade_to_telegram():
                             ])
                     await asyncio.sleep(0.1)
                 text += '<pre>'
-                table.set_style(PLAIN_COLUMNS)
                 text += table.get_string()
                 text += '</pre>'
                 text += '\n'
@@ -317,15 +316,14 @@ async def push_trade_to_telegram():
                 table.align["IV"] = "r"
                 table.align["Index Price"] = "r"
                 table.add_row([
-                    f'{"🔴" if direction=="SELL" else "🟢"} {direction}',
-                    f'{"🔶" if currency=="BTC" else "🔷"} {data["symbol"]} {"📈" if callOrPut=="C" else "📉"}',
+                    f'{"🔴" if direction=="SELL" else "🟢"}{direction}',
+                    f'{"🔶" if currency=="BTC" else "🔷"}{data["symbol"]}{"📈" if callOrPut=="C" else "📉"}',
                     f'{data["price"]} {"U" if data["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"} (${data["price"] if data["source"].upper()=="BYBIT" else float(data["price"])*float(data["index_price"]):,.2f})',
                     f'{data["size"]} {"₿" if currency=="BTC" else "Ξ"} (${float(data["size"])*float(data["index_price"])/1000:,.2f}K){" ‼️‼️" if (data["currency"] == "BTC" and float(data["size"]) >= 1000) or (data["currency"] == "ETH" and float(data["size"]) >= 10000) else ""}',
                     f'{str(data["iv"])+"%" if data["iv"] else ""}',
                     f'{"$"+str(data["index_price"]) if data["index_price"] else ""}'
                 ])
                 text += '<pre>'
-                table.set_style(PLAIN_COLUMNS)
                 text += table.get_string()
                 text += '</pre>'
                 text += '\n'
