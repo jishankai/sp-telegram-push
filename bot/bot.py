@@ -56,7 +56,7 @@ async def fetch_deribit_data(currency):
             """
             if "block_trade_id" in trade:
                 trade = {
-                    "trade_id": trade["block_trade_id"] if "block_trade_id" in trade else trade["trade_id"],
+                    "trade_id": trade["block_trade_id"],
                     "source": "deribit",
                     "symbol": trade["instrument_name"],
                     "currency": currency,
@@ -185,7 +185,7 @@ async def fetch_deribit_data_all():
             await fetch_deribit_data("BTC")
             await fetch_deribit_data("ETH")
         except Exception as e:
-            logger.error(f"Error: {e}")
+            logger.error(f"Error1: {e}")
             continue
 
         await asyncio.sleep(30)
@@ -197,7 +197,7 @@ async def fetch_okx_data_all():
             await fetch_okx_data("BTC")
             await fetch_okx_data("ETH")
         except Exception as e:
-            logger.error(f"Error: {e}")
+            logger.error(f"Error2: {e}")
             continue
         await asyncio.sleep(60)
 
@@ -209,7 +209,7 @@ async def fetch_bybit_data_all():
                 await fetch_bybit_data(symbol)
                 await asyncio.sleep(1)
         except Exception as e:
-            logger.error(f"Error: {e}")
+            logger.error(f"Error3: {e}")
             continue
 
         await asyncio.sleep(60)
@@ -228,7 +228,7 @@ async def handle_trade_data():
                 elif data["currency"] == "ETH" and float(data["size"]) >= 250:
                     redis_client.put_item(data, 'bigsize_trade_queue')
         except Exception as e:
-            logger.error(f"Error: {e}")
+            logger.error(f"Error4: {e}")
             continue
         # Wait for 10 second before fetching data again
         await asyncio.sleep(0.1)
@@ -267,7 +267,7 @@ async def push_block_trade_to_telegram():
                     parse_mode=ParseMode.HTML,
                 )
         except Exception as e:
-            logger.error(f"Error: {e}")
+            logger.error(f"Error5: {e}")
             continue
         # Wait for 10 second before fetching data again
         await asyncio.sleep(5)
@@ -299,7 +299,7 @@ async def push_trade_to_telegram():
                     parse_mode=ParseMode.HTML,
                 )
         except Exception as e:
-            logger.error(f"Error: {e}")
+            logger.error(f"Error6: {e}")
             continue
         # Wait for 5 second before fetching data again
         await asyncio.sleep(5)
