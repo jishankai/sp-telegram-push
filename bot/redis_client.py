@@ -62,7 +62,7 @@ class RedisClient:
     def put_block_trade(self, block_trade, id):
         block_trade_str = json.dumps(block_trade)
         self.client.lpush(id, block_trade_str)
-        self.client.sadd('trade_set', id)
+        self.client.sadd('trade_set', block_trade['trade_id'])
 
     def get_block_trade(self, id):
         if self.client.llen(id) > 0:

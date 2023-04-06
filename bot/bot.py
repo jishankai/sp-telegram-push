@@ -56,9 +56,9 @@ async def fetch_deribit_data(currency):
             }
             """
             if "block_trade_id" in trade:
-                trade_id = trade["block_trade_id"]
+                block_trade_id = trade["block_trade_id"]
                 trade = {
-                    "trade_id": trade_id,
+                    "trade_id": trade["trade_id"],
                     "source": "deribit",
                     "symbol": trade["instrument_name"],
                     "currency": currency,
@@ -70,9 +70,9 @@ async def fetch_deribit_data(currency):
                     "liquidation": True if "liquidation" in trade else False,
                     "timestamp": trade["timestamp"],
                 }
-                if not redis_client.is_block_trade_id_member(trade_id):
-                    redis_client.put_block_trade_id(trade_id)
-                redis_client.put_block_trade(trade, trade_id)
+                if not redis_client.is_block_trade_id_member(block_trade_id):
+                    redis_client.put_block_trade_id(block_trade_id)
+                redis_client.put_block_trade(trade, block_trade_id)
             elif 'iv' in trade:
                 trade = {
                     "trade_id": trade["trade_id"],
@@ -277,7 +277,7 @@ async def push_block_trade_to_telegram():
                                 f'{direction}',
                                 f'{data["symbol"]}',
                                 f'{data["price"]} {"U" if data["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"} (${data["price"] if data["source"].upper()=="BYBIT" else float(data["price"])*float(data["index_price"]):,.2f})',
-                                f'{data["price"]} {"U" if data["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"} (${data["price"] if data["source"].upper()=="BYBIT" else float(data["price"])*float(data["index_price"]):,.2f})',
+                                f'{data["size"]} {"₿" if currency=="BTC" else "Ξ"} (${float(data["size"])*float(data["index_price"])/1000:,.2f}K)',
                                 f'',
                                 f'{"$"+str(data["index_price"])}'
                             ])
