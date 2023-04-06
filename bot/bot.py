@@ -247,27 +247,29 @@ async def push_block_trade_to_telegram():
                     if data:
                         if not is_first_record:
                             text += f'<i>🕛 {datetime.fromtimestamp(int(data["timestamp"])//1000)} UTC <b>{id.decode("utf-8")}</b></i>\n'
-                            text += '<table><tr><th></th><th>Instrument<th/><th>Price</th><th>Size</th><th>IV</th><th>Index Price</th></tr>'
+                            text += '<pre>\n'
+                            text += '||Instrument|Price|Size|IV|Index Price|\n'
+                            text += '|:---:|:---:|---:|---:|---:|---:|\n'
                             is_first_record = True
                         direction = data["direction"].upper()
                         callOrPut = data["symbol"].split("-")[-1]
                         currency = data["currency"]
                         if callOrPut == "C" or callOrPut == "P":
-                            text += f'<tr><td>{"🔴" if direction=="SELL" else "🟢"} {direction}</td>'
-                            text += f'<td>{"🔶" if currency=="BTC" else "🔷"} {data["symbol"]} {"📈" if callOrPut=="C" else "📉"}</td>'
-                            text += f'<td>{data["price"]} {"U" if data["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"} (${data["price"] if data["source"].upper()=="BYBIT" else float(data["price"])*float(data["index_price"]):,.2f})</td>'
-                            text += f'<td>{data["size"]} {"₿" if currency=="BTC" else "Ξ"} (${float(data["size"])*float(data["index_price"])/1000:,.2f}K){" ‼️‼️" if (data["currency"] == "BTC" and float(data["size"]) >= 1000) or (data["currency"] == "ETH" and float(data["size"]) >= 10000) else ""}</td>'
-                            text += f'<td>{str(data["iv"])+"%"}</td>'
-                            text += f'<td>{"$"+str(data["index_price"])}</td></tr>'
+                            text += f'|{"🔴" if direction=="SELL" else "🟢"} {direction}|'
+                            text += f'|{"🔶" if currency=="BTC" else "🔷"} {data["symbol"]} {"📈" if callOrPut=="C" else "📉"}|'
+                            text += f'|{data["price"]} {"U" if data["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"} (${data["price"] if data["source"].upper()=="BYBIT" else float(data["price"])*float(data["index_price"]):,.2f})|'
+                            text += f'|{data["size"]} {"₿" if currency=="BTC" else "Ξ"} (${float(data["size"])*float(data["index_price"])/1000:,.2f}K){" ‼️‼️" if (data["currency"] == "BTC" and float(data["size"]) >= 1000) or (data["currency"] == "ETH" and float(data["size"]) >= 10000) else ""}|'
+                            text += f'|{str(data["iv"])+"%"}|'
+                            text += f'|{"$"+str(data["index_price"])}|\n'
                         else:
-                            text += f'<tr><td>{"🔴" if direction=="SELL" else "🟢"} {direction}</td>'
-                            text += f'<td>{"🔶" if currency=="BTC" else "🔷"} {data["symbol"]}</td>'
-                            text += f'<td>{data["price"]} {"U" if data["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"} (${data["price"] if data["source"].upper()=="BYBIT" else float(data["price"])*float(data["index_price"]):,.2f})</td>'
-                            text += f'<td>{data["price"]} {"U" if data["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"} (${data["price"] if data["source"].upper()=="BYBIT" else float(data["price"])*float(data["index_price"]):,.2f})</td>'
-                            text += f'<td></td>'
-                            text += f'<td>{"$"+str(data["index_price"])}</td></tr>'
+                            text += f'|{"🔴" if direction=="SELL" else "🟢"} {direction}|'
+                            text += f'|{"🔶" if currency=="BTC" else "🔷"} {data["symbol"]}|'
+                            text += f'|{data["price"]} {"U" if data["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"} (${data["price"] if data["source"].upper()=="BYBIT" else float(data["price"])*float(data["index_price"]):,.2f})|'
+                            text += f'|{data["price"]} {"U" if data["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"} (${data["price"] if data["source"].upper()=="BYBIT" else float(data["price"])*float(data["index_price"]):,.2f})|'
+                            text += f'||'
+                            text += f'|{"$"+str(data["index_price"])}|\n'
                     await asyncio.sleep(0.1)
-                text += '</table>'
+                text += '</pre>'
                 text += f'<i>#block</i>'
 
                 # Send the data to Telegram group
@@ -294,14 +296,17 @@ async def push_trade_to_telegram():
                 currency = data["currency"]
                 text = '<b><i>📊 {data["source"].upper()}</i></b>\n'
                 text += f'<i>🕛 {datetime.fromtimestamp(int(data["timestamp"])//1000)} UTC <b>{data["trade_id"]}</b></i>\n'
-                text += '<table><tr><th></th><th>Instrument<th/><th>Price</th><th>Size</th><th>IV</th><th>Index Price</th></tr>'
-                text += f'<tr><td>{"🔴" if direction=="SELL" else "🟢"} {direction}</td>'
-                text += f'<td>{"🔶" if currency=="BTC" else "🔷"} {data["symbol"]} {"📈" if callOrPut=="C" else "📉"}</td>'
-                text += f'<td>{data["price"]} {"U" if data["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"} (${data["price"] if data["source"].upper()=="BYBIT" else float(data["price"])*float(data["index_price"]):,.2f})</td>'
-                text += f'<td>{data["size"]} {"₿" if currency=="BTC" else "Ξ"} (${float(data["size"])*float(data["index_price"])/1000:,.2f}K){" ‼️‼️" if (data["currency"] == "BTC" and float(data["size"]) >= 1000) or (data["currency"] == "ETH" and float(data["size"]) >= 10000) else ""}</td>'
-                text += f'<td>{str(data["iv"])+"%" if data["iv"] else ""}</td>'
-                text += f'<td>{"$"+str(data["index_price"]) if data["index_price"] else ""}</td></tr>'
-                text += '</table>'
+                text += '<pre>\n'
+                text += '||Instrument|Price|Size|IV|Index Price|\n'
+                text += '|:---:|:---:|---:|---:|---:|---:|\n'
+                text += f'|{"🔴" if direction=="SELL" else "🟢"} {direction}|'
+                text += f'|{"🔶" if currency=="BTC" else "🔷"} {data["symbol"]} {"📈" if callOrPut=="C" else "📉"}|'
+                text += f'|{data["price"]} {"U" if data["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"} (${data["price"] if data["source"].upper()=="BYBIT" else float(data["price"])*float(data["index_price"]):,.2f})|'
+                text += f'|{data["size"]} {"₿" if currency=="BTC" else "Ξ"} (${float(data["size"])*float(data["index_price"])/1000:,.2f}K){" ‼️‼️" if (data["currency"] == "BTC" and float(data["size"]) >= 1000) or (data["currency"] == "ETH" and float(data["size"]) >= 10000) else ""}|'
+
+                text += f'|{str(data["iv"])+"%" if data["iv"] else ""}|'
+                text += f'|{"$"+str(data["index_price"]) if data["index_price"] else ""}|\n'
+                text += '</pre>'
                 if data["liquidation"]:
                     text += f'<i>#liquidation</i>'
                 else:
