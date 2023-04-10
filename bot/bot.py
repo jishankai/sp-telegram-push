@@ -264,7 +264,7 @@ async def push_block_trade_to_telegram():
                             text += f'{"🔴" if direction=="SELL" else "🟢"} {direction} '
                             text += f'{"🔶" if currency=="BTC" else "🔷"} {data["symbol"]} '
                             text += f'at ${float(data["price"]):,.2f} '
-                            text += f'<b>Size</b>: {float(data["size"]) /1000:,.2f}K) '
+                            text += f'<b>Size</b>: {float(data["size"]) /1000:,.2f}K '
                             text += f'<b>Index Price</b>: {"$"+str(data["index_price"])}'
                     await asyncio.sleep(0.1)
                 text += '\n'
