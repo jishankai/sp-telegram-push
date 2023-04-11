@@ -261,7 +261,7 @@ async def push_block_trade_to_telegram():
                         trade["expiry"] = None
 
                 # sort trades by strike if strike is not None
-                trades = sorted(trades, key=lambda x: x["strike"] if x["strike"] is not None else 0)
+                trades = sorted(trades, key=lambda x: int(x["strike"]) if x["strike"] is not None else 0)
 
                 # analyse trades to get legs, contract_type, strike, expiry, size_ratio, side
                 legs = len(trades)
@@ -285,7 +285,7 @@ async def push_block_trade_to_telegram():
                     elif (trades[0]["callOrPut"] == "P" and trades[1]["callOrPut"] == "C") or (trades[0]["callOrPut"] == "C" and trades[1]["callOrPut"] == "P"):
                         contract_type = "PC"
                     # strike
-                    if trades[0]["strike"] is None or trades[1]["strike"] is None:
+                    if contract_type=="F" or trades[0]["strike"] is None or trades[1]["strike"] is None:
                         strike = "N"
                     elif trades[0]["strike"] < trades[1]["strike"]:
                         strike = "A<B"
@@ -294,7 +294,7 @@ async def push_block_trade_to_telegram():
                     else:
                         strike = "A>B"
                     # expiry
-                    if trades[0]["expiry"] is None or trades[1]["expiry"] is None:
+                    if contract_type=="F" or trades[0]["expiry"] is None or trades[1]["expiry"] is None:
                         expiry = "N"
                     elif trades[0]["expiry"] == trades[1]["expiry"]:
                         expiry = "A=B"
@@ -303,7 +303,7 @@ async def push_block_trade_to_telegram():
                     else:
                         expiry = "A>B"
                     # size_ratio
-                    if trades[0]["size"] is None or trades[1]["size"] is None:
+                    if contract_type=="F" or trades[0]["size"] is None or trades[1]["size"] is None:
                         size_ratio = "N"
                     elif trades[0]["size"] == trades[1]["size"]:
                         size_ratio = "1:1"
@@ -312,9 +312,12 @@ async def push_block_trade_to_telegram():
                     else:
                         size_ratio = "N:1"
                     # side
-                    sideA = "A" if trades[0]["direction"].upper() == "BUY" else "-A"
-                    sideB = "+B" if trades[1]["direction"].upper() == "BUY" else "-B"
-                    side = sideA + sideB
+                    if contract_type=="F":
+                        side = "N"
+                    else:
+                        sideA = "A" if trades[0]["direction"].upper() == "BUY" else "-A"
+                        sideB = "+B" if trades[1]["direction"].upper() == "BUY" else "-B"
+                        side = sideA + sideB
                 elif legs == 3:
                     # contract_type
                     if trades[0]["callOrPut"] == trades[1]["callOrPut"] == trades[2]["callOrPut"] == "C":
