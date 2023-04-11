@@ -396,7 +396,11 @@ async def push_block_trade_to_telegram():
                 if result.empty:
                     text = "CUSTOM STRATEGY"
                 else:
-                    text = result["Strategy Name"].values[0] + " " + result["View"].values[0]
+                    view = result["View"].values[0]
+                    if not pd.isna(view):
+                        text = f'{result["Strategy Name"].values[0]} ({view})'
+                    else:
+                        text = result["Strategy Name"].values[0]
 
                 text += '\n'
                 text += f"<b><i>📊 DERIBIT {id.decode('utf-8')}</i></b>"
