@@ -113,6 +113,7 @@ async def fetch_bybit_data(symbol):
             "isBlockTrade": true
             },
             """
+            logger.error(trade)
             trade = {
                 "trade_id": trade["execId"],
                 "source": "bybit",
@@ -444,7 +445,7 @@ async def push_trade_to_telegram():
 
                 text = strategy
                 text += '\n'
-                text = f'<b><i>📊 {data["source"].upper()} {data["trade_id"]}</i></b>'
+                text += f'<b><i>📊 {data["source"].upper()} {data["trade_id"]}</i></b>'
                 text += '\n'
                 text += f'<i>🕛 {datetime.fromtimestamp(int(data["timestamp"])//1000)} UTC</i>'
                 text += '\n'
