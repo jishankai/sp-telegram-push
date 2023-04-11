@@ -5,6 +5,7 @@ import requests
 from datetime import datetime
 import asyncio
 import time
+import pandas as pd
 
 import telegram
 from telegram.constants import ParseMode, ChatAction
@@ -24,6 +25,7 @@ OKX_TRADE_API = "https://www.okx.com/api/v5/public/option-trades"
 redis_client = redis_client.RedisClient()
 bot = telegram.Bot(token=config.telegram_token)
 
+deribit_combo = pd.read_csv("./deribit_combo.csv")
 
 async def fetch_deribit_data(currency):
     response = requests.get(DERIBIT_TRADE_API, params={
@@ -71,7 +73,7 @@ async def fetch_deribit_data(currency):
                 }
                 if not redis_client.is_block_trade_id_member(block_trade_id):
                     redis_client.put_block_trade_id(block_trade_id)
-                redis_client.put_block_trade(trade, block_trade_id)
+                    redis_client.put_block_trade(trade, block_trade_id)
             elif 'iv' in trade:
                 trade = {
                     "trade_id": trade["trade_id"],
@@ -237,40 +239,180 @@ async def handle_trade_data():
 async def push_block_trade_to_telegram():
     while True:
         try:
-            # Pop data from Redis
             id = redis_client.get_block_trade_id()
-            if id and redis_client.get_block_trade_len(id) > 0:
-                text = f"<b><i>📊 DERIBIT {id.decode('utf-8')}</i></b>\n"
-                is_first_record = False
+            trades = []
+            if id:
                 while redis_client.get_block_trade_len(id) > 0:
-                    data = redis_client.get_block_trade(id)
-                    if data:
-                        if not is_first_record:
-                            text += f'<i>🕛 {datetime.fromtimestamp(int(data["timestamp"])//1000)} UTC</i>'
-                            is_first_record = True
-                        direction = data["direction"].upper()
-                        callOrPut = data["symbol"].split("-")[-1]
-                        currency = data["currency"]
-                        if callOrPut == "C" or callOrPut == "P":
-                            text += '\n'
-                            text += f'{"🔴" if direction=="SELL" else "🟢"} {direction} '
-                            text += f'{"🔶" if currency=="BTC" else "🔷"} {data["symbol"]} {"📈" if callOrPut=="C" else "📉"} '
-                            text += f'at {data["price"]} {"U" if data["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"} (${data["price"] if data["source"].upper()=="BYBIT" else float(data["price"])*float(data["index_price"]):,.2f}) '
-                            text += f'<b>Size</b>: {data["size"]} {"₿" if currency=="BTC" else "Ξ"} (${float(data["size"])*float(data["index_price"])/1000:,.2f}K){" ‼️‼️" if (data["currency"] == "BTC" and float(data["size"]) >= 1000) or (data["currency"] == "ETH" and float(data["size"]) >= 10000) else ""} '
-                            text += f'<b>IV</b>: {str(data["iv"])+"%"} '
-                            text += f'<b>Index Price</b>: {"$"+str(data["index_price"])}'
-                        else:
-                            text += '\n'
-                            text += f'{"🔴" if direction=="SELL" else "🟢"} {direction} '
-                            text += f'{"🔶" if currency=="BTC" else "🔷"} {data["symbol"]} '
-                            text += f'at ${float(data["price"]):,.2f} '
-                            text += f'<b>Size</b>: {float(data["size"]) /1000:,.2f}K '
-                            text += f'<b>Index Price</b>: {"$"+str(data["index_price"])}'
-                    await asyncio.sleep(0.1)
+                    trades.push(redis_client.get_block_trade(id))
+            else:
+                continue
+
+            if trades:
+                # trade["symbol"]可能是"BTC-28JUN21-40000-C", "BTC-28JUN21-40000-P", "ETH-28JUN21-4000-C", "ETH-28JUN21-4000-P", "ETH-PERPETUAL", "ETH-14APR23"等格式。分解trades数据，得到callOrPut, strike, expiry并重新存入trades数组中
+                for trade in trades:
+                    if trade["symbol"].split("-")[-1] == "C" or trade["symbol"].split("-")[-1] == "P":
+                        trade["callOrPut"] = trade["symbol"].split("-")[-1]
+                        trade["strike"] = trade["symbol"].split("-")[-2]
+                        trade["expiry"] = trade["symbol"].split("-")[-3]
+                    else:
+                        trade["callOrPut"] = None
+                        trade["strike"] = None
+                        trade["expiry"] = None
+                        # sort trades by strike
+                trades = sorted(trades, key=lambda x: x["strike"])
+
+                # analyse trades to get legs, contract_type, strike, expiry, size_ratio, side
+                legs = len(trades)
+                contract_type = None
+                strike = None
+                expiry = None
+                size_ratio = None
+                size = None
+                if legs == 1:
+                    contract_type = trades[0]["callOrPut"]
+                    size_ratio = 1
+                    side = "A" if trades[0]["deriction"] == "BUY" else "-A"
+                elif legs == 2:
+                    # contract_type
+                    if trades[0]["callOrPut"] is None or trades[1]["callOrPut"] is None:
+                        contract_type = "F"
+                    elif trades[0]["callOrPut"] == trades[1]["callOrPut"] == "C":
+                        contract_type = "C"
+                    elif trades[0]["callOrPut"] == trades[1]["callOrPut"] == "P":
+                        contract_type = "P"
+                    elif trades[0]["callOrPut"] == "P" and trades[1]["callOrPut"] == "C":
+                        contract_type = "PC"
+                        # strike
+                    if trades[0]["strike"] < trades[1]["strike"]:
+                        strike = "A<B"
+                    elif trades[0]["strike"] == trades[1]["strike"]:
+                        strike = "A=B"
+                    else:
+                        strike = "A>B"
+                        # expiry
+                    if trades[0]["expiry"] == trades[1]["expiry"]:
+                        expiry = "A=B"
+                    elif trades[0]["expiry"] < trades[1]["expiry"]:
+                        expiry = "A<B"
+                    else:
+                        expiry = "A>B"
+                        # size_ratio
+                    if trades[0]["size"] == trades[1]["size"]:
+                        size_ratio = "1:1"
+                    elif trades[0]["size"] < trades[1]["size"]:
+                        size_ratio = "1:N"
+                    else:
+                        size_ratio = "N:1"
+                        # side
+                    sideA = "A" if trades[0]["direction"] == "BUY" else "-A"
+                    sideB = "+B" if trades[1]["direction"] == "BUY" else "-B"
+                    side = sideA + sideB
+                elif legs == 3:
+                    # contract_type
+                    if trades[0]["callOrPut"] == trades[1]["callOrPut"] == trades[2]["callOrPut"] == "C":
+                        contract_type = "C"
+                    elif trades[0]["callOrPut"] == trades[1]["callOrPut"] == trades[2]["callOrPut"] == "P":
+                        contract_type = "P"
+                        # strike
+                    if trades[0]["strike"] < trades[1]["strike"] < trades[2]["strike"]:
+                        strike = "A<B<C"
+                    elif trades[0]["strike"] == trades[1]["strike"] < trades[2]["strike"]:
+                        strike = "A=B<C"
+                    elif trades[0]["strike"] < trades[1]["strike"] == trades[2]["strike"]:
+                        strike = "A<B=C"
+                    elif trades[0]["strike"] == trades[1]["strike"] == trades[2]["strike"]:
+                        strike = "A=B=C"
+                        # expiry
+                    if trades[0]["expiry"] == trades[1]["expiry"] == trades[2]["expiry"]:
+                        expiry = "A=B=C"
+                    elif trades[0]["expiry"] < trades[1]["expiry"] < trades[2]["expiry"]:
+                        expiry = "A<B<C"
+                    elif trades[0]["expiry"] == trades[1]["expiry"] < trades[2]["expiry"]:
+                        expiry = "A=B<C"
+                    elif trades[0]["expiry"] < trades[1]["expiry"] == trades[2]["expiry"]:
+                        expiry = "A<B=C"
+                    elif trades[0]["expiry"] < trades[1]["expiry"] > trades[2]["expiry"]:
+                        expiry = "A>B>C"
+                        # size_ratio: "1:2:1" or None
+                    if trades[0]["size"]*2 == trades[1]["size"] == trades[2]["size"]*2:
+                        size_ratio = "1:2:1"
+                        # side
+                    sideA = "A" if trades[0]["direction"] == "BUY" else "-A"
+                    sideB = "+B" if trades[1]["direction"] == "BUY" else "-B"
+                    sideC = "+C" if trades[2]["direction"] == "BUY" else "-C"
+                    side = sideA + sideB + sideC
+                elif legs == 4:
+                    # contract_type: "C", "P", "PPCC", None
+                    if trades[0]["callOrPut"] == trades[1]["callOrPut"] == trades[2]["callOrPut"] == trades[3]["callOrPut"] == "C":
+                        contract_type = "C"
+                    elif trades[0]["callOrPut"] == trades[1]["callOrPut"] == trades[2]["callOrPut"] == trades[3]["callOrPut"] == "P":
+                        contract_type = "P"
+                    elif trades[0]["callOrPut"] == trades[1]["callOrPut"] == "P" and trades[2]["callOrPut"] == trades[3]["callOrPut"] == "C":
+                        contract_type = "PPCC"
+                        # strike: "A<B<C<D", "A<B=C<D" or None
+                    if trades[0]["strike"] < trades[1]["strike"] < trades[2]["strike"] < trades[3]["strike"]:
+                        strike = "A<B<C<D"
+                    elif trades[0]["strike"] < trades[1]["strike"] == trades[2]["strike"] < trades[3]["strike"]:
+                        strike = "A<B=C<D"
+                        # expiry: "A=B=C=D" or None
+                    if trades[0]["expiry"] == trades[1]["expiry"] == trades[2]["expiry"] == trades[3]["expiry"]:
+                        expiry = "A=B=C=D"
+                        # size_ratio: "1:1:1:1" or None
+                    if trades[0]["size"] == trades[1]["size"] == trades[2]["size"] == trades[3]["size"]:
+                        size_ratio = "1:1:1:1"
+                        # side
+                    sideA = "A" if trades[0]["direction"] == "BUY" else "-A"
+                    sideB = "+B" if trades[1]["direction"] == "BUY" else "-B"
+                    sideC = "+C" if trades[2]["direction"] == "BUY" else "-C"
+                    sideD = "+D" if trades[3]["direction"] == "BUY" else "-D"
+                    side = sideA + sideB + sideC + sideD
+
+                # 根据参数查询策略名称和视图
+                result = deribit_combo.loc[(deribit_combo["Leg Amount"]==leg) &
+                                (deribit_combo["Contract Type"]==amount) &
+                                (deribit_combo["Contract Type.1"]==contract_type) &
+                                (deribit_combo["Strike"]==strike) &
+                                (deribit_combo["Expiry"]==expiry) &
+                                (deribit_combo["Size Ratio"]==size_ratio) &
+                                (deribit_combo["Side"]==side)]
+
+                # 输出结果
+                if result.empty:
+                    view = None
+                    strategy = "CUSTOM STRATEGY"
+                else:
+                    view = result["View"].values[0]
+                    strategy = result["Strategy Name"].values[0]
+
+                text = strategy + " " + view
+                text += '\n'
+                text += f"<b><i>📊 DERIBIT {id.decode('utf-8')}</i></b>"
+                text += '\n'
+                text += f'<i>🕛 {datetime.fromtimestamp(int(trades[0]["timestamp"])//1000)} UTC</i>'
+
+                for trade in trades:
+                    direction = trade["direction"].upper()
+                    callOrPut = trade["symbol"].split("-")[-1]
+                    currency = trade["currency"]
+                    if callOrPut == "C" or callOrPut == "P":
+                        text += '\n'
+                        text += f'{"🔴" if direction=="SELL" else "🟢"} {direction} '
+                        text += f'{"🔶" if currency=="BTC" else "🔷"} {trade["symbol"]} {"📈" if callOrPut=="C" else "📉"} '
+                        text += f'at {trade["price"]} {"U" if trade["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"} (${trade["price"] if trade["source"].upper()=="BYBIT" else float(trade["price"])*float(trade["index_price"]):,.2f}) '
+                        text += f'<b>Size</b>: {trade["size"]} {"₿" if currency=="BTC" else "Ξ"} (${float(trade["size"])*float(trade["index_price"])/1000:,.2f}K){" ‼️‼️" if (trade["currency"] == "BTC" and float(trade["size"]) >= 1000) or (trade["currency"] == "ETH" and float(trade["size"]) >= 10000) else ""} '
+                        text += f'<b>IV</b>: {str(trade["iv"])+"%"} '
+                        text += f'<b>Index Price</b>: {"$"+str(trade["index_price"])}'
+                    else:
+                        text += '\n'
+                        text += f'{"🔴" if direction=="SELL" else "🟢"} {direction} '
+                        text += f'{"🔶" if currency=="BTC" else "🔷"} {trade["symbol"]} '
+                        text += f'at ${float(trade["price"]):,.2f} '
+                        text += f'<b>Size</b>: {float(trade["size"]) /1000:,.2f}K '
+                        text += f'<b>Index Price</b>: {"$"+str(trade["index_price"])}'
                 text += '\n'
                 text += f'<i>#block</i>'
 
-                # Send the data to Telegram group
+                # Send the text to Telegram group
                 await bot.send_message(
                     chat_id=config.group_chat_id,
                     text=text,
@@ -292,6 +434,20 @@ async def push_trade_to_telegram():
                 direction = data["direction"].upper()
                 callOrPut = data["symbol"].split("-")[-1]
                 currency = data["currency"]
+                # 根据direction和callOrPut判断strategy是"LONG CALL","SHORT CALL","LONG PUT"还是"SHORT PUT"
+                if direction == "BUY":
+                    if callOrPut == "C":
+                        strategy = "LONG CALL"
+                    elif callOrPut == "P":
+                        strategy = "LONG PUT"
+                elif direction == "SELL":
+                    if callOrPut == "C":
+                        strategy = "SHORT CALL"
+                    elif callOrPut == "P":
+                        strategy = "SHORT PUT"
+
+                text = strategy
+                text += '\n'
                 text = f'<b><i>📊 {data["source"].upper()} {data["trade_id"]}</i></b>'
                 text += '\n'
                 text += f'<i>🕛 {datetime.fromtimestamp(int(data["timestamp"])//1000)} UTC</i>'
