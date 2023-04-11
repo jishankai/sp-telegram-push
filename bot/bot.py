@@ -272,7 +272,7 @@ async def push_block_trade_to_telegram():
                 size = "N"
                 if legs == 1:
                     contract_type = trades[0]["callOrPut"]
-                    size_ratio = 1
+                    size_ratio = "1"
                     side = "A" if trades[0]["direction"].upper() == "BUY" else "-A"
                 elif legs == 2:
                     # contract_type
