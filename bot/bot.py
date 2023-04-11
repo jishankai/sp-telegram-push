@@ -368,9 +368,8 @@ async def push_block_trade_to_telegram():
                     side = sideA + sideB + sideC + sideD
 
                 # 根据参数查询策略名称和视图
-                result = deribit_combo.loc[(deribit_combo["Leg Amount"]==leg) &
-                                (deribit_combo["Contract Type"]==amount) &
-                                (deribit_combo["Contract Type.1"]==contract_type) &
+                result = deribit_combo.loc[(deribit_combo["Legs"]==legs) &
+                                (deribit_combo["Contract Type"]==contract_type) &
                                 (deribit_combo["Strike"]==strike) &
                                 (deribit_combo["Expiry"]==expiry) &
                                 (deribit_combo["Size Ratio"]==size_ratio) &
