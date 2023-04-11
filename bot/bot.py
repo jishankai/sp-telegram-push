@@ -302,7 +302,9 @@ async def push_block_trade_to_telegram():
                     else:
                         expiry = "A>B"
                     # size_ratio
-                    if trades[0]["size"] == trades[1]["size"]:
+                    if trades[0]["size"] is None or trades[1]["size"] is None:
+                        size_ratio = "N"
+                    elif trades[0]["size"] == trades[1]["size"]:
                         size_ratio = "1:1"
                     elif trades[0]["size"] < trades[1]["size"]:
                         size_ratio = "1:N"
