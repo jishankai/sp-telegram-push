@@ -5,6 +5,7 @@ import requests
 from datetime import datetime
 import asyncio
 import time
+import os
 import pandas as pd
 
 import telegram
@@ -25,7 +26,8 @@ OKX_TRADE_API = "https://www.okx.com/api/v5/public/option-trades"
 redis_client = redis_client.RedisClient()
 bot = telegram.Bot(token=config.telegram_token)
 
-deribit_combo = pd.read_csv("./deribit_combo.csv")
+directory = os.path.dirname(os.path.realpath(__file__))
+deribit_combo = pd.read_csv(f"{directory}/deribit_combo.csv")
 
 async def fetch_deribit_data(currency):
     response = requests.get(DERIBIT_TRADE_API, params={
@@ -243,9 +245,7 @@ async def push_block_trade_to_telegram():
             trades = []
             if id:
                 while redis_client.get_block_trade_len(id) > 0:
-                    trades.push(redis_client.get_block_trade(id))
-            else:
-                continue
+                    trades.append(redis_client.get_block_trade(id))
 
             if trades:
                 # trade["symbol"]可能是"BTC-28JUN21-40000-C", "BTC-28JUN21-40000-P", "ETH-28JUN21-4000-C", "ETH-28JUN21-4000-P", "ETH-PERPETUAL", "ETH-14APR23"等格式。分解trades数据，得到callOrPut, strike, expiry并重新存入trades数组中
