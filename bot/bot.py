@@ -213,7 +213,7 @@ async def fetch_bybit_data_all():
             symbols = await fetch_bybit_symbol()
             for symbol in symbols:
                 await fetch_bybit_data(symbol)
-                await asyncio.sleep(1)
+                await asyncio.sleep(5)
         except Exception as e:
             logger.error(f"Error3: {e}")
             continue
