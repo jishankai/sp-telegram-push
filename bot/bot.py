@@ -282,7 +282,7 @@ async def push_block_trade_to_telegram():
                         contract_type = "C"
                     elif trades[0]["callOrPut"] == trades[1]["callOrPut"] == "P":
                         contract_type = "P"
-                    elif trades[0]["callOrPut"] == "P" and trades[1]["callOrPut"] == "C":
+                    elif (trades[0]["callOrPut"] == "P" and trades[1]["callOrPut"] == "C") or (trades[0]["callOrPut"] == "C" and trades[1]["callOrPut"] == "P"):
                         contract_type = "PC"
                     # strike
                     if trades[0]["strike"] is None or trades[1]["strike"] is None:
