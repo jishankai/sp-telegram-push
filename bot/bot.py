@@ -377,13 +377,10 @@ async def push_block_trade_to_telegram():
 
                 # 输出结果
                 if result.empty:
-                    view = None
-                    strategy = "CUSTOM STRATEGY"
+                    text = "CUSTOM STRATEGY"
                 else:
-                    view = result["View"].values[0]
-                    strategy = result["Strategy Name"].values[0]
+                    text = result["Strategy Name"].values[0] + " " + result["View"].values[0]
 
-                text = strategy + " " + view
                 text += '\n'
                 text += f"<b><i>📊 DERIBIT {id.decode('utf-8')}</i></b>"
                 text += '\n'
