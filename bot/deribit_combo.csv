@@ -1,9 +1,9 @@
 ﻿Legs,Contract Type,Strike,Expiry,Size Ratio,Side,Strategy Name,View
-1 ,C,,,1,A,LONG CALL,
-1 ,C,,,1,-A,SHORT CALL,
-1 ,P,,,1,A,LONG PUT,
-1 ,P,,,1,-A,SHORT PUT,
-2 ,F,,,,,FUTURES SPREAD,
+1 ,C,N,N,1,A,LONG CALL,
+1 ,C,N,N,1,-A,SHORT CALL,
+1 ,P,N,N,1,A,LONG PUT,
+1 ,P,N,N,1,-A,SHORT PUT,
+2 ,F,N,N,N,N,FUTURES SPREAD,
 2,C,A<B,A=B,1:1,A-B,LONG CALL SPREAD,🐮 Spot
 2,C,A<B,A=B,1:1,-A+B,SHORT CALL SPREAD,🐻 Spot
 2,C,A<B,A=B,1:N,A-B,LONG CALL RATIO SPREAD,🐮 Spot
