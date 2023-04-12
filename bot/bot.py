@@ -260,8 +260,8 @@ async def push_block_trade_to_telegram():
                         trade["strike"] = None
                         trade["expiry"] = None
 
-                # sort trades by strike if strike is not None
-                trades = sorted(trades, key=lambda x: int(x["strike"]) if x["strike"] is not None else 0)
+                # sort trades by strike if strike is not None, else by callOrPut and its value P<C if callOrPut is not none, else by expiry
+                trades = sorted(trades, key=lambda x: (x["strike"] is None, x["strike"], x["callOrPut"] is None, x["callOrPut"] == "P", x["callOrPut"] == "C", x["expiry"] is None, x["expiry"]))
 
                 # analyse trades to get legs, contract_type, strike, expiry, size_ratio, side
                 legs = len(trades)
