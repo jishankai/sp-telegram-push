@@ -79,9 +79,9 @@ async def fetch_deribit_data(currency):
 
                 # midas only
                 if (trade["currency"] == "BTC" and float(trade["size"]) >= 100) or (trade["currency"] == "ETH" and float(trade["size"]) >= 500):
-                    if not redis_client.is_midas_block_trade_id_member(f"midas_{block_trade_id}"):
-                        redis_client.put_midas_block_trade_id(f"midas_{block_trade_id}")
-                    redis_client.put_midas_block_trade(trade, f"midas_{block_trade_id}")
+                    if not redis_client.is_block_trade_id_member(f"midas_{block_trade_id}"):
+                        redis_client.put_block_trade_id(f"midas_{block_trade_id}")
+                    redis_client.put_block_trade(trade, f"midas_{block_trade_id}")
             elif 'iv' in trade:
                 trade = {
                     "trade_id": trade["trade_id"],
@@ -406,16 +406,16 @@ async def push_block_trade_to_telegram():
 
                 # 输出结果
                 if result.empty:
-                    text = "CUSTOM STRATEGY"
+                    text = "📃 CUSTOM STRATEGY 📃"
                 else:
                     view = result["View"].values[0]
                     if not pd.isna(view):
-                        text = f'{result["Strategy Name"].values[0]} ({view})'
+                        text = f'📃 {result["Strategy Name"].values[0]} ({view}) 📃'
                     else:
-                        text = result["Strategy Name"].values[0]
+                        text = f'📃 result["Strategy Name"].values[0] 📃'
 
                 text += '\n'
-                text += f"<b><i>📊 DERIBIT {id.decode('utf-8')}</i></b>"
+                text += f"<b><i>📝 DERIBIT {id.decode('utf-8')}</i></b>"
                 text += '\n'
                 text += f'<i>🕛 {datetime.fromtimestamp(int(trades[0]["timestamp"])//1000)} UTC</i>'
 
@@ -424,20 +424,25 @@ async def push_block_trade_to_telegram():
                     callOrPut = trade["symbol"].split("-")[-1]
                     currency = trade["currency"]
                     if callOrPut == "C" or callOrPut == "P":
-                        text += '\n'
-                        text += f'{"🔴" if direction=="SELL" else "🟢"} {direction} '
+                        text += '\n\n'
+                        text += f'{"📕" if direction=="SELL" else "📗"} {direction} '
                         text += f'{"🔶" if currency=="BTC" else "🔷"} {trade["symbol"]} {"📈" if callOrPut=="C" else "📉"} '
                         text += f'at {trade["price"]} {"U" if trade["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"} (${trade["price"] if trade["source"].upper()=="BYBIT" else float(trade["price"])*float(trade["index_price"]):,.2f}) '
-                        text += f'<b>Size</b>: {trade["size"]} {"₿" if currency=="BTC" else "Ξ"} (${float(trade["size"])*float(trade["index_price"])/1000:,.2f}K){" ‼️‼️" if (trade["currency"] == "BTC" and float(trade["size"]) >= 1000) or (trade["currency"] == "ETH" and float(trade["size"]) >= 10000) else ""} '
-                        text += f'<b>IV</b>: {str(trade["iv"])+"%"} '
-                        text += f'<b>Index Price</b>: {"$"+str(trade["index_price"])}'
-                    else:
                         text += '\n'
-                        text += f'{"🔴" if direction=="SELL" else "🟢"} {direction} '
+                        text += f'⚖️ <b>Size</b>: {trade["size"]} {"₿" if currency=="BTC" else "Ξ"} (${float(trade["size"])*float(trade["index_price"])/1000:,.2f}K){" ‼️‼️" if (trade["currency"] == "BTC" and float(trade["size"]) >= 1000) or (trade["currency"] == "ETH" and float(trade["size"]) >= 10000) else ""} '
+                        text += '\n'
+                        text += f'📚 <b>IV</b>: {str(trade["iv"])+"%"} '
+                        text += '\n'
+                        text += f'📖 <b>Index Price</b>: {"$"+str(trade["index_price"])}'
+                    else:
+                        text += '\n\n'
+                        text += f'{"📕" if direction=="SELL" else "📗"} {direction} '
                         text += f'{"🔶" if currency=="BTC" else "🔷"} {trade["symbol"]} '
                         text += f'at ${float(trade["price"]):,.2f} '
-                        text += f'<b>Size</b>: {float(trade["size"]) /1000:,.2f}K '
-                        text += f'<b>Index Price</b>: {"$"+str(trade["index_price"])}'
+                        text += '\n'
+                        text += f'⚖️ <b>Size</b>: {float(trade["size"]) /1000:,.2f}K '
+                        text += '\n'
+                        text += f'📖 <b>Index Price</b>: {"$"+str(trade["index_price"])}'
                 text += '\n'
                 text += f'<i>#block</i>'
 
@@ -492,27 +497,30 @@ def generate_trade_message(data):
     # 根据direction和callOrPut判断strategy是"LONG CALL","SHORT CALL","LONG PUT"还是"SHORT PUT"
     if direction == "BUY":
         if callOrPut == "C":
-            strategy = "LONG CALL"
+            strategy = "📃 LONG CALL 📃"
         elif callOrPut == "P":
-            strategy = "LONG PUT"
+            strategy = "📃 LONG PUT 📃"
     elif direction == "SELL":
         if callOrPut == "C":
-            strategy = "SHORT CALL"
+            strategy = "📃 SHORT CALL 📃"
         elif callOrPut == "P":
-            strategy = "SHORT PUT"
+            strategy = "📃 SHORT PUT 📃"
 
     text = strategy
     text += '\n'
-    text += f'<b><i>📊 {data["source"].upper()} {data["trade_id"]}</i></b>'
+    text += f'<b><i>📝 {data["source"].upper()} {data["trade_id"]}</i></b>'
     text += '\n'
     text += f'<i>🕛 {datetime.fromtimestamp(int(data["timestamp"])//1000)} UTC</i>'
-    text += '\n'
-    text += f'{"🔴" if direction=="SELL" else "🟢"} {direction} '
+    text += '\n\n'
+    text += f'{"📕" if direction=="SELL" else "📗"} {direction} '
     text += f'{"🔶" if currency=="BTC" else "🔷"} {data["symbol"]} {"📈" if callOrPut=="C" else "📉"} '
     text += f'at {data["price"]} {"U" if data["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"} (${data["price"] if data["source"].upper()=="BYBIT" else float(data["price"])*float(data["index_price"]):,.2f}) '
-    text += f'<b>Size</b>: {data["size"]} {"₿" if currency=="BTC" else "Ξ"} (${float(data["size"])*float(data["index_price"])/1000:,.2f}K){" ‼️‼️" if (data["currency"] == "BTC" and float(data["size"]) >= 1000) or (data["currency"] == "ETH" and float(data["size"]) >= 10000) else ""} '
-    text += f'<b>IV</b>: {str(data["iv"])+"%" if data["iv"] else "Unknown"} '
-    text += f'<b>Index Price</b>: {"$"+str(data["index_price"]) if data["index_price"] else "Unknown"}'
+    text += '\n'
+    text += f'⚖️ <b>Size</b>: {data["size"]} {"₿" if currency=="BTC" else "Ξ"} (${float(data["size"])*float(data["index_price"])/1000:,.2f}K){" ‼️‼️" if (data["currency"] == "BTC" and float(data["size"]) >= 1000) or (data["currency"] == "ETH" and float(data["size"]) >= 10000) else ""} '
+    text += '\n'
+    text += f'📚 <b>IV</b>: {str(data["iv"])+"%" if data["iv"] else "Unknown"} '
+    text += '\n'
+    text += f'📖 <b>Index Price</b>: {"$"+str(data["index_price"]) if data["index_price"] else "Unknown"}'
     text += '\n'
     if "liquidation" in data and data["liquidation"]:
         text += f'<i>#liquidation</i>'
