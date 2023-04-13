@@ -59,6 +59,9 @@ async def fetch_deribit_data(currency):
             }
             """
             if "block_trade_id" in trade:
+                # next trade if iv is none and size is less than 500K
+                if "iv" not in trade and float(trade["amount"]) < 500000:
+                    continue
                 block_trade_id = trade["block_trade_id"]
                 trade = {
                     "trade_id": trade["trade_id"],
@@ -406,13 +409,13 @@ async def push_block_trade_to_telegram():
 
                 # 输出结果
                 if result.empty:
-                    text = "📃 CUSTOM STRATEGY 📃"
+                    text = "📃 CUSTOM STRATEGY"
                 else:
                     view = result["View"].values[0]
                     if not pd.isna(view):
-                        text = f'📃 {result["Strategy Name"].values[0]} ({view}) 📃'
+                        text = f'📃 {result["Strategy Name"].values[0]} ({view})'
                     else:
-                        text = f'📃 {result["Strategy Name"].values[0]} 📃'
+                        text = f'📃 {result["Strategy Name"].values[0]}'
 
                 text += '\n'
                 if id.decode('utf-8').startswith("midas_"):
@@ -501,14 +504,14 @@ def generate_trade_message(data):
     # 根据direction和callOrPut判断strategy是"LONG CALL","SHORT CALL","LONG PUT"还是"SHORT PUT"
     if direction == "BUY":
         if callOrPut == "C":
-            strategy = "📃 LONG CALL 📃"
+            strategy = "📃 LONG CALL"
         elif callOrPut == "P":
-            strategy = "📃 LONG PUT 📃"
+            strategy = "📃 LONG PUT"
     elif direction == "SELL":
         if callOrPut == "C":
-            strategy = "📃 SHORT CALL 📃"
+            strategy = "📃 SHORT CALL"
         elif callOrPut == "P":
-            strategy = "📃 SHORT PUT 📃"
+            strategy = "📃 SHORT PUT"
 
     text = strategy
     text += '\n'
