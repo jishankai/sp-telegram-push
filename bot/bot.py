@@ -412,10 +412,14 @@ async def push_block_trade_to_telegram():
                     if not pd.isna(view):
                         text = f'📃 {result["Strategy Name"].values[0]} ({view}) 📃'
                     else:
-                        text = f'📃 result["Strategy Name"].values[0] 📃'
+                        text = f'📃 {result["Strategy Name"].values[0]} 📃'
 
                 text += '\n'
-                text += f"<b><i>📝 DERIBIT {id.decode('utf-8')}</i></b>"
+                if id.decode('utf-8').startswith("midas_"):
+                    # cut midas_
+                    text += f"<b><i>📝 DERIBIT {id.decode('utf-8')[6:]}</i></b>"
+                else:
+                    text += f"<b><i>📝 DERIBIT {id.decode('utf-8')}</i></b>"
                 text += '\n'
                 text += f'<i>🕛 {datetime.fromtimestamp(int(trades[0]["timestamp"])//1000)} UTC</i>'
 
