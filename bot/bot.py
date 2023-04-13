@@ -75,7 +75,13 @@ async def fetch_deribit_data(currency):
                 }
                 if not redis_client.is_block_trade_id_member(block_trade_id):
                     redis_client.put_block_trade_id(block_trade_id)
-                    redis_client.put_block_trade(trade, block_trade_id)
+                redis_client.put_block_trade(trade, block_trade_id)
+
+                # midas only
+                if (trade["currency"] == "BTC" and float(trade["size"]) >= 100) or (trade["currency"] == "ETH" and float(trade["size"]) >= 500):
+                    if not redis_client.is_midas_block_trade_id_member(f"midas_{block_trade_id}"):
+                        redis_client.put_midas_block_trade_id(f"midas_{block_trade_id}")
+                    redis_client.put_midas_block_trade(trade, f"midas_{block_trade_id}")
             elif 'iv' in trade:
                 trade = {
                     "trade_id": trade["trade_id"],
@@ -231,8 +237,14 @@ async def handle_trade_data():
                 # Check if the size is >=25 or >=250
                 if data["currency"] == "BTC" and float(data["size"]) >= 25:
                     redis_client.put_item(data, 'bigsize_trade_queue')
+                    # midas only
+                    if float(data["size"]) >= 100:
+                        redis_client.put_item(data, 'midas_trade_queue')
                 elif data["currency"] == "ETH" and float(data["size"]) >= 250:
                     redis_client.put_item(data, 'bigsize_trade_queue')
+                    # midas only
+                    if float(data["size"]) >= 500:
+                        redis_client.put_item(data, 'midas_trade_queue')
         except Exception as e:
             logger.error(f"Error4: {e}")
             continue
@@ -429,12 +441,19 @@ async def push_block_trade_to_telegram():
                 text += '\n'
                 text += f'<i>#block</i>'
 
-                # Send the text to Telegram group
-                await bot.send_message(
-                    chat_id=config.group_chat_id,
-                    text=text,
-                    parse_mode=ParseMode.HTML,
-                )
+                # If id is like "midas_", then send the data to midas telegram group
+                if id.decode('utf-8').startswith("midas_"):
+                    await bot.send_message(
+                        chat_id=config.midas_group_chat_id,
+                        text=text,
+                        parse_mode=ParseMode.HTML,
+                    )
+                else:
+                    await bot.send_message(
+                        chat_id=config.group_chat_id,
+                        text=text,
+                        parse_mode=ParseMode.HTML,
+                    )
         except Exception as e:
             logger.error(f"Error5: {e}")
             continue
@@ -442,48 +461,20 @@ async def push_block_trade_to_telegram():
         await asyncio.sleep(5)
 
 # Define a function to send the data with prettify format to Telegram group
-async def push_trade_to_telegram():
+async def push_trade_to_telegram(group_chat_id):
     while True:
         try:
             # Pop data from Redis
-            data = redis_client.get_item('bigsize_trade_queue')
+            if group_chat_id == config.group_chat_id:
+                data = redis_client.get_item('bigsize_trade_queue')
+            elif group_chat_id == config.midas_group_chat_id:
+                data = redis_client.get_item('midas_trade_queue')
+
             if data:
-                direction = data["direction"].upper()
-                callOrPut = data["symbol"].split("-")[-1]
-                currency = data["currency"]
-                # 根据direction和callOrPut判断strategy是"LONG CALL","SHORT CALL","LONG PUT"还是"SHORT PUT"
-                if direction == "BUY":
-                    if callOrPut == "C":
-                        strategy = "LONG CALL"
-                    elif callOrPut == "P":
-                        strategy = "LONG PUT"
-                elif direction == "SELL":
-                    if callOrPut == "C":
-                        strategy = "SHORT CALL"
-                    elif callOrPut == "P":
-                        strategy = "SHORT PUT"
-
-                text = strategy
-                text += '\n'
-                text += f'<b><i>📊 {data["source"].upper()} {data["trade_id"]}</i></b>'
-                text += '\n'
-                text += f'<i>🕛 {datetime.fromtimestamp(int(data["timestamp"])//1000)} UTC</i>'
-                text += '\n'
-                text += f'{"🔴" if direction=="SELL" else "🟢"} {direction} '
-                text += f'{"🔶" if currency=="BTC" else "🔷"} {data["symbol"]} {"📈" if callOrPut=="C" else "📉"} '
-                text += f'at {data["price"]} {"U" if data["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"} (${data["price"] if data["source"].upper()=="BYBIT" else float(data["price"])*float(data["index_price"]):,.2f}) '
-                text += f'<b>Size</b>: {data["size"]} {"₿" if currency=="BTC" else "Ξ"} (${float(data["size"])*float(data["index_price"])/1000:,.2f}K){" ‼️‼️" if (data["currency"] == "BTC" and float(data["size"]) >= 1000) or (data["currency"] == "ETH" and float(data["size"]) >= 10000) else ""} '
-                text += f'<b>IV</b>: {str(data["iv"])+"%" if data["iv"] else "Unknown"} '
-                text += f'<b>Index Price</b>: {"$"+str(data["index_price"]) if data["index_price"] else "Unknown"}'
-                text += '\n'
-                if "liquidation" in data and data["liquidation"]:
-                    text += f'<i>#liquidation</i>'
-                else:
-                    text += f'<i>#onscreen</i>'
-
+                text = generate_trade_message(data)
                 # Send the data to Telegram group
                 await bot.send_message(
-                    chat_id=config.group_chat_id,
+                    chat_id=group_chat_id,
                     text=text,
                     parse_mode=ParseMode.HTML,
                 )
@@ -493,6 +484,43 @@ async def push_trade_to_telegram():
         # Wait for 5 second before fetching data again
         await asyncio.sleep(5)
 
+# generate a message with trade data
+def generate_trade_message(data):
+    direction = data["direction"].upper()
+    callOrPut = data["symbol"].split("-")[-1]
+    currency = data["currency"]
+    # 根据direction和callOrPut判断strategy是"LONG CALL","SHORT CALL","LONG PUT"还是"SHORT PUT"
+    if direction == "BUY":
+        if callOrPut == "C":
+            strategy = "LONG CALL"
+        elif callOrPut == "P":
+            strategy = "LONG PUT"
+    elif direction == "SELL":
+        if callOrPut == "C":
+            strategy = "SHORT CALL"
+        elif callOrPut == "P":
+            strategy = "SHORT PUT"
+
+    text = strategy
+    text += '\n'
+    text += f'<b><i>📊 {data["source"].upper()} {data["trade_id"]}</i></b>'
+    text += '\n'
+    text += f'<i>🕛 {datetime.fromtimestamp(int(data["timestamp"])//1000)} UTC</i>'
+    text += '\n'
+    text += f'{"🔴" if direction=="SELL" else "🟢"} {direction} '
+    text += f'{"🔶" if currency=="BTC" else "🔷"} {data["symbol"]} {"📈" if callOrPut=="C" else "📉"} '
+    text += f'at {data["price"]} {"U" if data["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"} (${data["price"] if data["source"].upper()=="BYBIT" else float(data["price"])*float(data["index_price"]):,.2f}) '
+    text += f'<b>Size</b>: {data["size"]} {"₿" if currency=="BTC" else "Ξ"} (${float(data["size"])*float(data["index_price"])/1000:,.2f}K){" ‼️‼️" if (data["currency"] == "BTC" and float(data["size"]) >= 1000) or (data["currency"] == "ETH" and float(data["size"]) >= 10000) else ""} '
+    text += f'<b>IV</b>: {str(data["iv"])+"%" if data["iv"] else "Unknown"} '
+    text += f'<b>Index Price</b>: {"$"+str(data["index_price"]) if data["index_price"] else "Unknown"}'
+    text += '\n'
+    if "liquidation" in data and data["liquidation"]:
+        text += f'<i>#liquidation</i>'
+    else:
+        text += f'<i>#onscreen</i>'
+
+    return text
+
 def run_bot() -> None:
     # Create two threads to fetch block trade data and send it to Telegram group by using asyncio
     try:
@@ -501,7 +529,8 @@ def run_bot() -> None:
         loop.create_task(fetch_okx_data_all())
         loop.create_task(fetch_bybit_data_all())
         loop.create_task(handle_trade_data())
-        loop.create_task(push_trade_to_telegram())
+        loop.create_task(push_trade_to_telegram(config.group_chat_id))
+        loop.create_task(push_trade_to_telegram(config.midas_group_chat_id))
         loop.create_task(push_block_trade_to_telegram())
         loop.run_forever()
     except Exception as e:

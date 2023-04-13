@@ -12,3 +12,4 @@ with open(config_dir / "config.yml", 'r') as f:
 telegram_token = config_yaml["telegram_token"]
 bot_id = config_yaml["bot_id"]
 group_chat_id = config_yaml["group_chat_id"]
+midas_group_chat_id = config_yaml["midas_group_chat_id"]
