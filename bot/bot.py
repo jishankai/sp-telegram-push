@@ -454,6 +454,11 @@ async def push_block_trade_to_telegram():
                 text += '\n'
                 text += f'<i>🕛 {datetime.fromtimestamp(int(trades[0]["timestamp"])//1000)} UTC</i>'
 
+                delta = 0
+                gamma = 0
+                vega = 0
+                theta = 0
+                rho = 0
                 for trade in trades:
                     direction = trade["direction"].upper()
                     callOrPut = trade["symbol"].split("-")[-1]
@@ -471,8 +476,15 @@ async def push_block_trade_to_telegram():
                         text += f'📖 <b>Index Price</b>: {"$"+str(trade["index_price"])}'
                         # if greeks
                         if "greeks" in trade:
-                            text += '\n'
-                            text += f'<i>Δ: {trade["greeks"]["delta"]}, Γ: {trade["greeks"]["gamma"]}, ν: {trade["greeks"]["vega"]}, Θ: {trade["greeks"]["theta"]}, ρ: {trade["greeks"]["rho"]}</i>'
+                            if direction == "BUY":
+                                size = float(trade["size"])
+                            else:
+                                size = -float(trade["size"])
+                            delta += size * float(trade["greeks"]["delta"])
+                            gamma += size * float(trade["greeks"]["gamma"])
+                            vega += size * float(trade["greeks"]["vega"])
+                            theta += size * float(trade["greeks"]["theta"])
+                            rho += size * float(trade["greeks"]["rho"])
                     else:
                         text += '\n\n'
                         text += f'{"📕" if direction=="SELL" else "📗"} {direction} '
@@ -482,6 +494,9 @@ async def push_block_trade_to_telegram():
                         text += f'⚖️ <b>Size</b>: {float(trade["size"]) /1000:,.2f}K '
                         text += '\n'
                         text += f'📖 <b>Index Price</b>: {"$"+str(trade["index_price"])}'
+                if delta != 0 or gamma != 0 or vega != 0 or theta != 0 or rho != 0:
+                    text += '\n'
+                    text += f'<i>Δ: {delta:,.5f}, Γ: {gamma:,.5f}, ν: {vega:,.5f}, Θ: {theta:,.5f}, ρ: {rho:,.5f}</i>'
                 text += '\n'
                 text += f'<i>#block</i>'
 
@@ -535,11 +550,13 @@ def generate_trade_message(data):
     currency = data["currency"]
     # 根据direction和callOrPut判断strategy是"LONG CALL","SHORT CALL","LONG PUT"还是"SHORT PUT"
     if direction == "BUY":
+        size = float(data["size"])
         if callOrPut == "C":
             strategy = "📃 LONG CALL"
         elif callOrPut == "P":
             strategy = "📃 LONG PUT"
     elif direction == "SELL":
+        size = -float(data["size"])
         if callOrPut == "C":
             strategy = "📃 SHORT CALL"
         elif callOrPut == "P":
@@ -562,7 +579,12 @@ def generate_trade_message(data):
     text += f'📖 <b>Index Price</b>: {"$"+str(data["index_price"]) if data["index_price"] else "Unknown"}'
     if "greeks" in trade:
         text += '\n'
-        text += f'<i>Δ: {trade["greeks"]["delta"]}, Γ: {trade["greeks"]["gamma"]}, ν: {trade["greeks"]["vega"]}, Θ: {trade["greeks"]["theta"]}, ρ: {trade["greeks"]["rho"]}</i>'
+        delta = float(trade["greeks"]["delta"]) * size
+        gamma = float(trade["greeks"]["gamma"]) * size
+        vega = float(trade["greeks"]["vega"]) * size
+        theta = float(trade["greeks"]["theta"]) * size
+        rho = float(trade["greeks"]["rho"]) * size
+        text += f'<i>Δ: {delta:,.5f}, Γ: {gamma:,.5f}, ν: {vega:,.5f}, Θ: {theta:,.5f}, ρ: {rho:,.5f}</i>'
     text += '\n'
     if "liquidation" in data and data["liquidation"]:
         text += f'<i>#liquidation</i>'
