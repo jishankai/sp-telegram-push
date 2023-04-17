@@ -495,7 +495,7 @@ async def push_block_trade_to_telegram():
                         text += '\n'
                         text += f'📖 <b>Index Price</b>: {"$"+str(trade["index_price"])}'
                 if delta != 0 or gamma != 0 or vega != 0 or theta != 0 or rho != 0:
-                    text += '\n'
+                    text += '\n\n'
                     text += f'<i>Δ: {delta:,.5f}, Γ: {gamma:,.5f}, ν: {vega:,.5f}, Θ: {theta:,.5f}, ρ: {rho:,.5f}</i>'
                 text += '\n'
                 text += f'<i>#block</i>'
