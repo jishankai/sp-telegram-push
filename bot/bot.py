@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 DERIBIT_TRADE_API = "https://www.deribit.com/api/v2/public/get_last_trades_by_currency"
+DERIBIT_TICKER_API = "https://www.deribit.com/api/v2/public/ticker"
 BYBIT_TRADE_API = "https://api-testnet.bybit.com/v5/market/recent-trade"
 BYBIT_SYMBOL_API = "https://api-testnet.bybit.com/v5/market/instruments-info"
 OKX_TRADE_API = "https://www.okx.com/api/v5/public/option-trades"
@@ -63,19 +64,40 @@ async def fetch_deribit_data(currency):
                 if "iv" not in trade and float(trade["amount"]) < 500000:
                     continue
                 block_trade_id = trade["block_trade_id"]
-                trade = {
-                    "trade_id": trade["trade_id"],
-                    "source": "deribit",
-                    "symbol": trade["instrument_name"],
-                    "currency": currency,
-                    "direction": trade["direction"],
-                    "price": trade["price"],
-                    "size": trade["amount"],
-                    "iv": trade["iv"] if "iv" in trade else None,
-                    "index_price": trade["index_price"],
-                    "liquidation": True if "liquidation" in trade else False,
-                    "timestamp": trade["timestamp"],
-                }
+                # get greeks if iv in trade
+                if "iv" in trade:
+                    ticker = requests.get(DERIBIT_TICKER_API, params={
+                        "instrument_name": trade["instrument_name"],
+                    }).json()
+                    greeks = ticker["result"]["greeks"]
+                    trade = {
+                        "trade_id": trade["trade_id"],
+                        "source": "deribit",
+                        "symbol": trade["instrument_name"],
+                        "currency": currency,
+                        "direction": trade["direction"],
+                        "price": trade["price"],
+                        "size": trade["amount"],
+                        "iv": trade["iv"],
+                        "greeks": greeks,
+                        "index_price": trade["index_price"],
+                        "liquidation": True if "liquidation" in trade else False,
+                        "timestamp": trade["timestamp"],
+                    }
+                else:
+                    trade = {
+                        "trade_id": trade["trade_id"],
+                        "source": "deribit",
+                        "symbol": trade["instrument_name"],
+                        "currency": currency,
+                        "direction": trade["direction"],
+                        "price": trade["price"],
+                        "size": trade["amount"],
+                        "iv": None,
+                        "index_price": trade["index_price"],
+                        "liquidation": True if "liquidation" in trade else False,
+                        "timestamp": trade["timestamp"],
+                    }
                 if not redis_client.is_block_trade_id_member(block_trade_id):
                     redis_client.put_block_trade_id(block_trade_id)
                 redis_client.put_block_trade(trade, block_trade_id)
@@ -86,6 +108,11 @@ async def fetch_deribit_data(currency):
                         redis_client.put_block_trade_id(f"midas_{block_trade_id}")
                     redis_client.put_block_trade(trade, f"midas_{block_trade_id}")
             elif 'iv' in trade:
+                # get greeks
+                ticker = requests.get(DERIBIT_TICKER_API, params={
+                    "instrument_name": trade["instrument_name"],
+                }).json()
+                greeks = ticker["result"]["greeks"]
                 trade = {
                     "trade_id": trade["trade_id"],
                     "source": "deribit",
@@ -95,6 +122,7 @@ async def fetch_deribit_data(currency):
                     "price": trade["price"],
                     "size": trade["amount"],
                     "iv": trade["iv"],
+                    "greeks": greeks,
                     "index_price": trade["index_price"],
                     "liquidation": True if "liquidation" in trade else False,
                     "timestamp": trade["timestamp"],
@@ -441,6 +469,10 @@ async def push_block_trade_to_telegram():
                         text += f'📚 <b>IV</b>: {str(trade["iv"])+"%"} '
                         text += '\n'
                         text += f'📖 <b>Index Price</b>: {"$"+str(trade["index_price"])}'
+                        # if greeks
+                        if "greeks" in trade:
+                            text += '\n'
+                            text += f'<i>Δ: trade["greeks"]["delta"], Γ: trade["greeks"]["gamma"], ν: trade["greeks"]["vega"], Θ: trade["greeks"]["theta"], ρ: trade["greeks"]["rho"]</i>'
                     else:
                         text += '\n\n'
                         text += f'{"📕" if direction=="SELL" else "📗"} {direction} '
@@ -528,6 +560,9 @@ def generate_trade_message(data):
     text += f'📚 <b>IV</b>: {str(data["iv"])+"%" if data["iv"] else "Unknown"} '
     text += '\n'
     text += f'📖 <b>Index Price</b>: {"$"+str(data["index_price"]) if data["index_price"] else "Unknown"}'
+    if "greeks" in trade:
+        text += '\n'
+        text += f'<i>Δ: trade["greeks"]["delta"], Γ: trade["greeks"]["gamma"], ν: trade["greeks"]["vega"], Θ: trade["greeks"]["theta"], ρ: trade["greeks"]["rho"]</i>'
     text += '\n'
     if "liquidation" in data and data["liquidation"]:
         text += f'<i>#liquidation</i>'
