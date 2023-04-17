@@ -472,7 +472,7 @@ async def push_block_trade_to_telegram():
                         # if greeks
                         if "greeks" in trade:
                             text += '\n'
-                            text += f'<i>Δ: trade["greeks"]["delta"], Γ: trade["greeks"]["gamma"], ν: trade["greeks"]["vega"], Θ: trade["greeks"]["theta"], ρ: trade["greeks"]["rho"]</i>'
+                            text += f'<i>Δ: {trade["greeks"]["delta"]}, Γ: {trade["greeks"]["gamma"]}, ν: {trade["greeks"]["vega"]}, Θ: {trade["greeks"]["theta"]}, ρ: {trade["greeks"]["rho"]}</i>'
                     else:
                         text += '\n\n'
                         text += f'{"📕" if direction=="SELL" else "📗"} {direction} '
@@ -562,7 +562,7 @@ def generate_trade_message(data):
     text += f'📖 <b>Index Price</b>: {"$"+str(data["index_price"]) if data["index_price"] else "Unknown"}'
     if "greeks" in trade:
         text += '\n'
-        text += f'<i>Δ: trade["greeks"]["delta"], Γ: trade["greeks"]["gamma"], ν: trade["greeks"]["vega"], Θ: trade["greeks"]["theta"], ρ: trade["greeks"]["rho"]</i>'
+        text += f'<i>Δ: {trade["greeks"]["delta"]}, Γ: {trade["greeks"]["gamma"]}, ν: {trade["greeks"]["vega"]}, Θ: {trade["greeks"]["theta"]}, ρ: {trade["greeks"]["rho"]}</i>'
     text += '\n'
     if "liquidation" in data and data["liquidation"]:
         text += f'<i>#liquidation</i>'
