@@ -580,13 +580,13 @@ def generate_trade_message(data):
     text += f'📚 <b>IV</b>: {str(data["iv"])+"%" if data["iv"] else "Unknown"} '
     text += '\n'
     text += f'📖 <b>Index Price</b>: {"$"+str(data["index_price"]) if data["index_price"] else "Unknown"}'
-    if "greeks" in trade:
+    if "greeks" in data:
         text += '\n'
-        delta = float(trade["greeks"]["delta"]) * size
-        gamma = float(trade["greeks"]["gamma"]) * size
-        vega = float(trade["greeks"]["vega"]) * size
-        theta = float(trade["greeks"]["theta"]) * size
-        rho = float(trade["greeks"]["rho"]) * size
+        delta = float(data["greeks"]["delta"]) * size
+        gamma = float(data["greeks"]["gamma"]) * size
+        vega = float(data["greeks"]["vega"]) * size
+        theta = float(data["greeks"]["theta"]) * size
+        rho = float(data["greeks"]["rho"]) * size
         text += f'<i>Δ: {delta:,.5f}, Γ: {gamma:,.5f}, ν: {vega:,.5f}, Θ: {theta:,.5f}, ρ: {rho:,.5f}</i>'
     text += '\n'
     if "liquidation" in data and data["liquidation"]:
