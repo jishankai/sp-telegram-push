@@ -124,7 +124,7 @@ async def fetch_deribit_data(currency):
                 # get greeks if big size
                 if (trade["currency"] == "BTC" and float(trade["size"]) >= 25) or (trade["currency"] == "ETH" and float(trade["size"]) >= 250):
                     ticker = requests.get(DERIBIT_TICKER_API, params={
-                        "instrument_name": trade["instrument_name"],
+                        "instrument_name": trade["symbol"],
                     }).json()
                     trade["greeks"] = ticker["result"]["greeks"]
 
