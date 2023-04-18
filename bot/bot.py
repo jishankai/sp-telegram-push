@@ -103,7 +103,7 @@ async def fetch_deribit_data(currency):
                 redis_client.put_block_trade(trade, block_trade_id)
 
                 # midas only
-                if (trade["currency"] == "BTC" and float(trade["size"]) >= 100) or (trade["currency"] == "ETH" and float(trade["size"]) >= 1000):
+                if (trade["currency"] == "BTC" and float(trade["size"]) >= 500) or (trade["currency"] == "ETH" and float(trade["size"]) >= 1000) and "iv" in trade:
                     if not redis_client.is_block_trade_id_member(f"midas_{block_trade_id}"):
                         redis_client.put_block_trade_id(f"midas_{block_trade_id}")
                     redis_client.put_block_trade(trade, f"midas_{block_trade_id}")
@@ -269,7 +269,7 @@ async def handle_trade_data():
                 if data["currency"] == "BTC" and float(data["size"]) >= 25:
                     redis_client.put_item(data, 'bigsize_trade_queue')
                     # midas only
-                    if float(data["size"]) >= 100:
+                    if float(data["size"]) >= 500:
                         redis_client.put_item(data, 'midas_trade_queue')
                 elif data["currency"] == "ETH" and float(data["size"]) >= 250:
                     redis_client.put_item(data, 'bigsize_trade_queue')
