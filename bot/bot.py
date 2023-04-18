@@ -108,11 +108,6 @@ async def fetch_deribit_data(currency):
                         redis_client.put_block_trade_id(f"midas_{block_trade_id}")
                     redis_client.put_block_trade(trade, f"midas_{block_trade_id}")
             elif 'iv' in trade:
-                # get greeks
-                ticker = requests.get(DERIBIT_TICKER_API, params={
-                    "instrument_name": trade["instrument_name"],
-                }).json()
-                greeks = ticker["result"]["greeks"]
                 trade = {
                     "trade_id": trade["trade_id"],
                     "source": "deribit",
@@ -122,11 +117,17 @@ async def fetch_deribit_data(currency):
                     "price": trade["price"],
                     "size": trade["amount"],
                     "iv": trade["iv"],
-                    "greeks": greeks,
                     "index_price": trade["index_price"],
                     "liquidation": True if "liquidation" in trade else False,
                     "timestamp": trade["timestamp"],
                 }
+                # get greeks if big size
+                if (trade["currency"] == "BTC" and float(trade["size"]) >= 25) or (trade["currency"] == "ETH" and float(trade["size"]) >= 250):
+                    ticker = requests.get(DERIBIT_TICKER_API, params={
+                        "instrument_name": trade["instrument_name"],
+                    }).json()
+                    trade["greeks"] = ticker["result"]["greeks"]
+
                 redis_client.put_trade(trade, id)
 
 async def fetch_bybit_data(symbol):
