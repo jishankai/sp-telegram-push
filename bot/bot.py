@@ -135,6 +135,9 @@ async def fetch_bybit_data(symbol):
         "category": "option",
     })
     data = response.json()
+    if data["ret_code"] != 0:
+        logger.error(f"Error fetching bybit data for {symbol}.")
+        return
     trades = data["result"]["list"]
     for trade in trades:
         id = f"bybit_{trade['execId']}"
