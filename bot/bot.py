@@ -13,6 +13,7 @@ from telegram.constants import ParseMode, ChatAction
 
 import config
 import redis_client
+import paradigm
 
 # logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -26,6 +27,7 @@ OKX_TRADE_API = "https://www.okx.com/api/v5/public/option-trades"
 
 redis_client = redis_client.RedisClient()
 bot = telegram.Bot(token=config.telegram_token)
+paradigm = paradigm.Paradigm(access_key=config.paradigm_access_key, secret_key=config.paradigm_secret_key)
 
 directory = os.path.dirname(os.path.realpath(__file__))
 deribit_combo = pd.read_csv(f"{directory}/deribit_combo.csv")
@@ -225,6 +227,34 @@ async def fetch_bybit_symbol():
         redis_client.set_bybit_symbols_timeout(int(time.time()) + 60*30)
 
         return symbols
+
+# fetch paradigm trade timestamp
+async def fetch_paradigm_trade_timestamp():
+    while True:
+        try:
+            await fetch_paradigm_grfq_timestamp()
+            await fetch_paradigm_drfq_timestamp()
+            # clear the expired timestamp
+            redis_client.remove_paradigm_trade_timestamp()
+        except Exception as e:
+            logger.error(f"Paradigm Error: {e}")
+            continue
+
+        await asyncio.sleep(10)
+
+async def fetch_paradigm_grfq_timestamp():
+    trades = await paradigm.get_trade_tape('/v1/grfq/trades', 'GET', '')
+    """Parse the trades data and save traded in redis set. The trades data is in the following format: {"count":32576,"next":"cD0yMDIzLTA0LTE5KzA2JTNBMDglM0EwNi40MTIxMzMlMkIwMCUzQTAw","results":[{"action":"BUY","id":50033336,"description":"Put  26 May 23  26000","instrument_kind":"OPTION","mark_price":"0.0238","price":"0.0244","product_codes":["DO"],"quantity":"25","quote_currency":"BTC","rfq_id":50043681,"traded":1681900075018.337,"venue":"DBT"},{"action":"BUY","id":50033335,"description":"Put  26 May 23  26000","instrument_kind":"OPTION","mark_price":"0.0238","price":"0.0244","product_codes":["DO"],"quantity":"25","quote_currency":"BTC","rfq_id":50043681,"traded":1681900074997.7478,"venue":"DBT"}]}"""
+    for trade in trades["results"]:
+        timestamp = int(trade["traded"])
+        redis_client.add_paradigm_trade_timestamp(timestamp)
+
+async def fetch_paradigm_drfq_timestamp():
+    trades = await paradigm.get_trade_tape('/v2/drfq/trade_tape', 'GET', '')
+    """Parse the trades data and save traded in redis set. The trades data is in the following format:{"count":2028,"next":"cD0yMDIzLTA0LTE4KzE0JTNBNDElM0EzOC41MjQ3MDYlMkIwMCUzQTAw","results":[{"id":"bt_2OdZ0MtOcOw21bJDstIaufMlkE1","rfq_id":"r_2OdYmXkbFpkc3ZRrk1B9ADDSsMm","venue":"DBT","kind":"OPTION","state":"FILLED","executed_at":1681892195920.0461,"filled_at":1681892196000.0,"side":"BUY","price":"-0.0126","quantity":"20","legs":[{"instrument_id":222841,"instrument_name":"BTC-28APR23-30000-P","price":"0.0383","product_code":"DO","quantity":"20","ratio":"1","side":"SELL"},{"instrument_id":222840,"instrument_name":"BTC-28APR23-30000-C","price":"0.0229","product_code":"DO","quantity":"20","ratio":"1","side":"SELL"},{"instrument_id":234763,"instrument_name":"BTC-26MAY23-31000-C","price":"0.0486","product_code":"DO","quantity":"20","ratio":"1","side":"BUY"}],"strategy_description":"DO_BTC-28APR23-30000-P_BTC-28APR23-30000-C_BTC-26MAY23-31000-C","description":"Cstm  -1.00  Put  28 Apr 23  30000\n      -1.00  Call  28 Apr 23  30000\n      +1.00  Call  26 May 23  31000","quote_currency":"BTC","mark_price":"-0.0139"},{"id":"bt_2OdYXDGE7WF0Yww82iSsLIK0Y9u","rfq_id":"r_2OdYQQVH6J39Pk0jLHmwadm9sMg","venue":"DBT","kind":"OPTION","state":"FILLED","executed_at":1681891963639.525,"filled_at":1681891963000.0,"side":"BUY","price":"0.0319","quantity":"20","legs":[{"instrument_id":222842,"instrument_name":"BTC-28APR23-32000-C","price":"0.006","product_code":"DO","quantity":"20","ratio":"1","side":"SELL"},{"instrument_id":229778,"instrument_name":"BTC-26MAY23-32000-C","price":"0.0379","product_code":"DO","quantity":"20","ratio":"1","side":"BUY"}],"strategy_description":"DO_BTC-28APR23-32000-C_BTC-26MAY23-32000-C","description":"CCal  28 Apr 23 32000 / 26 May 23 32000","quote_currency":"BTC","mark_price":"0.0305"}]}"""
+    for trade in trades["results"]:
+        timestamp = int(trade["filled_at"])
+        redis_client.add_paradigm_trade_timestamp(timestamp)
 
 async def fetch_deribit_data_all():
     while True:
@@ -503,6 +533,8 @@ async def push_block_trade_to_telegram():
                     text += f'<i>Δ: {delta:,.5f}, Γ: {gamma:,.5f}, ν: {vega:,.5f}, Θ: {theta:,.5f}, ρ: {rho:,.5f}</i>'
                 text += '\n'
                 text += f'<i>#block</i>'
+                if redis_client.is_paradigm_trade_timestamp_member(trades[0]["timestamp"]):
+                    text += f'<i> 👉 Block trades on <a href="https://www.paradigm.co">paradigm</a></i>'
 
                 # If id is like "midas_", then send the data to midas telegram group
                 if id.decode('utf-8').startswith("midas_"):
@@ -601,6 +633,7 @@ def run_bot() -> None:
     # Create two threads to fetch block trade data and send it to Telegram group by using asyncio
     try:
         loop = asyncio.get_event_loop()
+        loop.create_task(fetch_paradigm_trade_timestamp())
         loop.create_task(fetch_deribit_data_all())
         loop.create_task(fetch_okx_data_all())
         loop.create_task(fetch_bybit_data_all())

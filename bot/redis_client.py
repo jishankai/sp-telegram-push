@@ -72,3 +72,17 @@ class RedisClient:
 
     def get_block_trade_len(self, id):
         return self.client.llen(id)
+
+    # add paradigm trade timestamp to paradigm_trade_timestamp_set
+    def add_paradigm_trade_timestamp(self, timestamp):
+        self.client.sadd('paradigm_trade_timestamp_set', timestamp)
+
+    # remove items from paradigm_trade_timestamp_set if they are expired more than 5 minutes
+    def remove_paradigm_trade_timestamp(self):
+        timestamp_list = self.client.smembers('paradigm_trade_timestamp_set')
+        for timestamp in timestamp_list:
+            if int(timestamp) < int(time.time()) - 300:
+                self.client.srem('paradigm_trade_timestamp_set', timestamp)
+
+    def is_paradigm_trade_timestamp_member(self, timestamp):
+        return self.client.sismember('paradigm_trade_timestamp_set', timestamp)
