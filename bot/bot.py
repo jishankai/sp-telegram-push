@@ -243,14 +243,14 @@ async def fetch_paradigm_trade_timestamp():
         await asyncio.sleep(10)
 
 async def fetch_paradigm_grfq_timestamp():
-    trades = await paradigm.get_trade_tape('/v1/grfq/trades', 'GET', '')
+    trades = paradigm.get_trade_tape('/v1/grfq/trades', 'GET', '')
     """Parse the trades data and save traded in redis set. The trades data is in the following format: {"count":32576,"next":"cD0yMDIzLTA0LTE5KzA2JTNBMDglM0EwNi40MTIxMzMlMkIwMCUzQTAw","results":[{"action":"BUY","id":50033336,"description":"Put  26 May 23  26000","instrument_kind":"OPTION","mark_price":"0.0238","price":"0.0244","product_codes":["DO"],"quantity":"25","quote_currency":"BTC","rfq_id":50043681,"traded":1681900075018.337,"venue":"DBT"},{"action":"BUY","id":50033335,"description":"Put  26 May 23  26000","instrument_kind":"OPTION","mark_price":"0.0238","price":"0.0244","product_codes":["DO"],"quantity":"25","quote_currency":"BTC","rfq_id":50043681,"traded":1681900074997.7478,"venue":"DBT"}]}"""
     for trade in trades["results"]:
         timestamp = int(trade["traded"])
         redis_client.add_paradigm_trade_timestamp(timestamp)
 
 async def fetch_paradigm_drfq_timestamp():
-    trades = await paradigm.get_trade_tape('/v2/drfq/trade_tape', 'GET', '')
+    trades = paradigm.get_trade_tape('/v2/drfq/trade_tape', 'GET', '')
     """Parse the trades data and save traded in redis set. The trades data is in the following format:{"count":2028,"next":"cD0yMDIzLTA0LTE4KzE0JTNBNDElM0EzOC41MjQ3MDYlMkIwMCUzQTAw","results":[{"id":"bt_2OdZ0MtOcOw21bJDstIaufMlkE1","rfq_id":"r_2OdYmXkbFpkc3ZRrk1B9ADDSsMm","venue":"DBT","kind":"OPTION","state":"FILLED","executed_at":1681892195920.0461,"filled_at":1681892196000.0,"side":"BUY","price":"-0.0126","quantity":"20","legs":[{"instrument_id":222841,"instrument_name":"BTC-28APR23-30000-P","price":"0.0383","product_code":"DO","quantity":"20","ratio":"1","side":"SELL"},{"instrument_id":222840,"instrument_name":"BTC-28APR23-30000-C","price":"0.0229","product_code":"DO","quantity":"20","ratio":"1","side":"SELL"},{"instrument_id":234763,"instrument_name":"BTC-26MAY23-31000-C","price":"0.0486","product_code":"DO","quantity":"20","ratio":"1","side":"BUY"}],"strategy_description":"DO_BTC-28APR23-30000-P_BTC-28APR23-30000-C_BTC-26MAY23-31000-C","description":"Cstm  -1.00  Put  28 Apr 23  30000\n      -1.00  Call  28 Apr 23  30000\n      +1.00  Call  26 May 23  31000","quote_currency":"BTC","mark_price":"-0.0139"},{"id":"bt_2OdYXDGE7WF0Yww82iSsLIK0Y9u","rfq_id":"r_2OdYQQVH6J39Pk0jLHmwadm9sMg","venue":"DBT","kind":"OPTION","state":"FILLED","executed_at":1681891963639.525,"filled_at":1681891963000.0,"side":"BUY","price":"0.0319","quantity":"20","legs":[{"instrument_id":222842,"instrument_name":"BTC-28APR23-32000-C","price":"0.006","product_code":"DO","quantity":"20","ratio":"1","side":"SELL"},{"instrument_id":229778,"instrument_name":"BTC-26MAY23-32000-C","price":"0.0379","product_code":"DO","quantity":"20","ratio":"1","side":"BUY"}],"strategy_description":"DO_BTC-28APR23-32000-C_BTC-26MAY23-32000-C","description":"CCal  28 Apr 23 32000 / 26 May 23 32000","quote_currency":"BTC","mark_price":"0.0305"}]}"""
     for trade in trades["results"]:
         timestamp = int(trade["filled_at"])

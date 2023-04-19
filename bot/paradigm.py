@@ -19,8 +19,8 @@ class Paradigm:
         signature = base64.b64encode(digest)
         return timestamp, signature
 
-    def get_trade_tape(self, path, method, payload):
-        timestamp, signature = sign_request(
+    async def get_trade_tape(self, path, method, payload):
+        timestamp, signature = self.sign_request(
             method=method.encode('utf-8'),
             path=path.encode('utf-8'),
             body=payload.encode('utf-8'),
