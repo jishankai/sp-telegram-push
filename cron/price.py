@@ -32,9 +32,14 @@ def get_prices():
 
     text = "🏷️ Spot Prices\n\n"
     text += f'<i>🔶 BTC price: ${btc_price:.2f}</i>\n<i>🔷 ETH price: ${eth_price:.2f}</i>\n\n'
-    text += f'<i>{now.strftime("%Y-%m-%d %H:%M")} UTC</i>'
-    
+    text += f'<i>⏰ {now.strftime("%Y-%m-%d %H:%M")} UTC</i>'
+
     bot.send_message(chat_id=config_yaml["group_chat_id"], text=text, parse_mode=telegram.ParseMode.HTML)
+    # Midas
+    bot.send_message(chat_id=config_yaml["midas_group_chat_id"], text=text, parse_mode=telegram.ParseMode.HTML)
+    # SignalPlus
+    for chat_id in config_yaml["signalplus_group_chat_ids"]:
+        bot.send_message(chat_id=chat_id, text=text, parse_mode=telegram.ParseMode.HTML)
 
 if __name__ == "__main__":
     get_prices()
