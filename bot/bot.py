@@ -498,7 +498,6 @@ async def push_block_trade_to_telegram():
                     # cut signalplus_
                     text += f"<b><i>📝 DERIBIT {id.decode('utf-8')[11:]}</i></b>"
                 else:
-                else:
                     text += f"<b><i>📝 DERIBIT {id.decode('utf-8')}</i></b>"
                 text += '\n'
                 text += f'<i>🕛 {datetime.fromtimestamp(int(trades[0]["timestamp"])//1000)} UTC</i>'
