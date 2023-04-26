@@ -111,9 +111,14 @@ async def fetch_deribit_data(currency):
                     redis_client.put_block_trade(trade, f"midas_{block_trade_id}")
                 # signalplus only
                 if ((trade["currency"] == "BTC" and float(trade["size"]) >= 500) or (trade["currency"] == "ETH" and float(trade["size"]) >= 2000)) and trade["iv"] is not None:
-                    if not redis_client.is_block_trade_id_member(f"midas_{block_trade_id}"):
+                    if not redis_client.is_block_trade_id_member(f"signalplus_{block_trade_id}"):
                         redis_client.put_block_trade_id(f"signalplus_{block_trade_id}")
                     redis_client.put_block_trade(trade, f"signalplus_{block_trade_id}")
+                # playground only
+                if ((trade["currency"] == "BTC" and float(trade["size"]) >= 1000) or (trade["currency"] == "ETH" and float(trade["size"]) >= 10000)) and trade["iv"] is not None:
+                    if not redis_client.is_block_trade_id_member(f"playground_{block_trade_id}"):
+                        redis_client.put_block_trade_id(f"playground_{block_trade_id}")
+                    redis_client.put_block_trade(trade, f"playground_{block_trade_id}")
 
             elif 'iv' in trade:
                 trade = {
@@ -313,6 +318,9 @@ async def handle_trade_data():
                         redis_client.put_item(data, 'midas_trade_queue')
                         # signalplus
                         redis_client.put_item(data, 'signalplus_trade_queue')
+                        # playground
+                        if float(data["size"]) >= 1000:
+                            redis_client.put_item(data, 'playground_trade_queue')
                 elif data["currency"] == "ETH" and float(data["size"]) >= 250:
                     redis_client.put_item(data, 'bigsize_trade_queue')
                     # midas only
@@ -321,6 +329,9 @@ async def handle_trade_data():
                         # signalplus
                         if float(data["size"]) >= 2000:
                             redis_client.put_item(data, 'signalplus_trade_queue')
+                            # playground
+                            if float(data["size"]) >= 10000:
+                                redis_client.put_item(data, 'playground_trade_queue')
         except Exception as e:
             logger.error(f"Error4: {e}")
             continue
@@ -497,6 +508,9 @@ async def push_block_trade_to_telegram():
                 elif id.decode('utf-8').startswith("signalplus_"):
                     # cut signalplus_
                     text += f"<b><i>📝 DERIBIT {id.decode('utf-8')[11:]}</i></b>"
+                elif id.decode('utf-8').startswith("playground_"):
+                    # cut playground_
+                    text += f"<b><i>📝 DERIBIT {id.decode('utf-8')[11:]}</i></b>"
                 else:
                     text += f"<b><i>📝 DERIBIT {id.decode('utf-8')}</i></b>"
                 text += '\n'
@@ -564,6 +578,12 @@ async def push_block_trade_to_telegram():
                             text=text,
                             parse_mode=ParseMode.HTML,
                         )
+                elif id.decode('utf-8').startswith("playground_"):
+                    await bot.send_message(
+                        chat_id=config.playground_group_chat_id,
+                        text=text,
+                        parse_mode=ParseMode.HTML,
+                    )
                 else:
                     await bot.send_message(
                         chat_id=config.group_chat_id,
@@ -612,6 +632,16 @@ async def push_trade_to_telegram(group_chat_id):
                             text=text,
                             parse_mode=ParseMode.HTML,
                         )
+            elif group_chat_id == config.playground_group_chat_id:
+                data = redis_client.get_item('playground_trade_queue')
+                if data:
+                    text = generate_trade_message(data)
+                    # Send the data to Telegram group
+                    await bot.send_message(
+                        chat_id=group_chat_id,
+                        text=text,
+                        parse_mode=ParseMode.HTML,
+                    )
         except Exception as e:
             logger.error(f"Error6: {e}")
             continue
@@ -680,6 +710,7 @@ def run_bot() -> None:
         loop.create_task(push_trade_to_telegram(config.group_chat_id))
         loop.create_task(push_trade_to_telegram(config.midas_group_chat_id))
         loop.create_task(push_trade_to_telegram(config.signalplus_group_chat_ids[0]))
+        loop.create_task(push_trade_to_telegram(config.playground_group_chat_id))
         loop.create_task(push_block_trade_to_telegram())
         loop.run_forever()
     except Exception as e:
