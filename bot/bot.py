@@ -499,16 +499,16 @@ async def push_block_trade_to_telegram():
                     strategy_name = result["Strategy Name"].values[0]
                     # strategy_name = 'LONG CALL SPREAD' or 'SHORT CALL SPREAD', make strategy_name to be 'LONG {currency} CALL SPREAD' or 'SHORT {currency} CALL SPREAD'
                     if strategy_name.startswith("LONG"):
-                        strategy_name.replace("LONG", f"LONG {trades[0]['currency']}")
+                        strategy_name = strategy_name.replace("LONG", f"LONG {trades[0]['currency']}")
                     elif strategy_name.startswith("SHORT"):
-                        strategy_name.replace("SHORT", f"SHORT {trades[0]['currency']}")
+                        strategy_name = strategy_name.replace("SHORT", f"SHORT {trades[0]['currency']}")
 
                     if not pd.isna(view):
                         text = f'<b>{strategy_name} ({view}) ({trades[0]["size"]}x)</b>'
                     else:
                         text = f'<b>{strategy_name} ({trades[0]["size"]}x)</b>'
 
-                text += '\n'
+                # text += '\n'
                 # if id.decode('utf-8').startswith("midas_"):
                 #     # cut midas_
                 #     text += f"<b><i>📝 DERIBIT {id.decode('utf-8')[6:]}</i></b>"
@@ -533,12 +533,12 @@ async def push_block_trade_to_telegram():
                     callOrPut = trade["symbol"].split("-")[-1]
                     currency = trade["currency"]
                     if callOrPut == "C" or callOrPut == "P":
-                        text += '\n'
+                        text += '\n\n'
                         text += f'{"🔴 Sold" if direction=="SELL" else "🟢 Bought"} {trade["size"]}x '
                         text += f'{"🔶" if currency=="BTC" else "🔷"} {trade["symbol"]} {"📈" if callOrPut=="C" else "📉"} '
                         text += f'at {trade["price"]} {"U" if trade["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"} (${trade["price"] if trade["source"].upper()=="BYBIT" else float(trade["price"])*float(trade["index_price"]):,.2f}) '
                         text += f' {"‼️‼️" if (trade["currency"] == "BTC" and float(trade["size"]) >= 1000) or (trade["currency"] == "ETH" and float(trade["size"]) >= 10000) else ""}'
-                        text += '\n\n'
+                        text += '\n'
                         text += f'📊 <b>Vol</b>: {str(trade["iv"])+"%"},'
                         text += f' <b>Ref</b>: {"$"+str(trade["index_price"])}'
                         # if greeks
@@ -560,10 +560,10 @@ async def push_block_trade_to_telegram():
                         text += '\n\n'
                         text += f'📊 <b>Ref</b>: {"$"+str(trade["index_price"])}'
                 if delta != 0 or gamma != 0 or vega != 0 or theta != 0 or rho != 0:
-                    text += '\n'
+                    text += '\n\n'
                     text += f'📖 <b>Greeks</b>: <i>Δ: {delta:,.5f}, Γ: {gamma:,.5f}, ν: {vega:,.5f}, Θ: {theta:,.5f}, ρ: {rho:,.5f}</i>'
                 text += '\n\n'
-                text += f'<i>DERIBIT (Powered by <a href="https://www.paradigm.co">Paradigm</a>)</i>'
+                text += f'<i>DERIBIT (Powered by Paradigm)</i>'
                 text += '\n'
                 text += f'<i>#block</i>'
                 # TODO paradigm
@@ -694,7 +694,7 @@ def generate_trade_message(data):
         rho = float(data["greeks"]["rho"]) * size
         text += f'📖 <b>Greeks</b>: <i>Δ: {delta:,.5f}, Γ: {gamma:,.5f}, ν: {vega:,.5f}, Θ: {theta:,.5f}, ρ: {rho:,.5f}</i>'
     text += '\n\n'
-    text += f'<i>{data["source"].upper()} (Powered by <a href="https://www.paradigm.co">Paradigm</a>)</i>'
+    text += f'<i>{data["source"].upper()} (Powered by Paradigm)</i>'
     text += '\n'
     if "liquidation" in data and data["liquidation"]:
         text += f'<i>#liquidation</i>'
