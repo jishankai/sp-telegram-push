@@ -568,7 +568,7 @@ async def push_block_trade_to_telegram():
                     text += f'{"/".join(expiries)} '
                     text += f'{"/".join(strikes)} '
                     text += f'{short_strategy_name} '
-                    text += f'at {premium:,.6f} {"₿" if currency=="BTC" else "Ξ"} (${premium*float(index_price):,.2f}) '
+                    text += f'at {premium:,.5f} {"₿" if currency=="BTC" else "Ξ"} (${premium*float(index_price):,.2f}) '
                     text += f' {"‼️‼️" if (trades[0]["currency"] == "BTC" and float(trades[0]["size"]) >= 1000) or (trades[0]["currency"] == "ETH" and float(trades[0]["size"]) >= 10000) else ""}'
                     text += '\n\n'
                     text += f'📊 <b>Leg Prices</b>: {", ".join(prices)}'
