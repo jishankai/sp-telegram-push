@@ -348,16 +348,46 @@ async def push_block_trade_to_telegram():
                     trades.append(redis_client.get_block_trade(id))
 
             if trades:
+                strikes = []
+                expiries = []
+                prices = []
+                premium = 0
+                delta = 0
+                gamma = 0
+                vega = 0
+                theta = 0
+                rho = 0
+
                 # trade["symbol"]可能是"BTC-28JUN21-40000-C", "BTC-28JUN21-40000-P", "ETH-28JUN21-4000-C", "ETH-28JUN21-4000-P", "ETH-PERPETUAL", "ETH-14APR23"等格式。分解trades数据，得到callOrPut, strike, expiry并重新存入trades数组中
                 for trade in trades:
                     if trade["symbol"].split("-")[-1] == "C" or trade["symbol"].split("-")[-1] == "P":
                         trade["callOrPut"] = trade["symbol"].split("-")[-1]
                         trade["strike"] = trade["symbol"].split("-")[-2]
                         trade["expiry"] = trade["symbol"].split("-")[-3]
+                        strikes.append(trade["strike"])
+                        expiries.append(trade["expiry"])
+                        prices.append(f'{trade["price"]}({str(trade["iv"])+"v"})')
+                        direction = trade["direction"].upper()
+                        if direction == "BUY":
+                            size = float(trade["size"])
+                        else:
+                            size = -float(trade["size"])
+                        premium += float(trade["price"]) * float(size)
+                        # if greeks
+                        if "greeks" in trade:
+                            delta += size * float(trade["greeks"]["delta"])
+                            gamma += size * float(trade["greeks"]["gamma"])
+                            vega += size * float(trade["greeks"]["vega"])
+                            theta += size * float(trade["greeks"]["theta"])
+                            rho += size * float(trade["greeks"]["rho"])
                     else:
                         trade["callOrPut"] = None
                         trade["strike"] = None
                         trade["expiry"] = None
+
+                expiries = set(expiries)
+                strikes = set(strikes)
+                premium = premium / float(trades[0]["size"])
 
                 # sort trades by strike if strike is not None, else by callOrPut and its value P<C if callOrPut is not none, else by expiry
                 trades = sorted(trades, key=lambda x: (x["strike"] is None, x["strike"], x["callOrPut"] is None, x["callOrPut"] == "C", x["callOrPut"] == "P", x["expiry"] is None, x["expiry"]))
@@ -368,7 +398,7 @@ async def push_block_trade_to_telegram():
                 strike = "N"
                 expiry = "N"
                 size_ratio = "N"
-                size = "N"
+                side = "N"
                 if legs == 1:
                     contract_type = trades[0]["callOrPut"]
                     size_ratio = "1"
@@ -490,80 +520,63 @@ async def push_block_trade_to_telegram():
                                 (deribit_combo["Expiry"]==expiry) &
                                 (deribit_combo["Size Ratio"]==size_ratio) &
                                 (deribit_combo["Side"]==side)]
-
                 # 输出结果
                 if result.empty:
-                    text = f"<b>CUSTOM {trades[0]['currency']} STRATEGY</b>"
+                    text = f"<b>CUSTOM {trades[0]['currency']} STRATEGY:</b>"
+                    for trade in trades:
+                        direction = trade["direction"].upper()
+                        callOrPut = trade["symbol"].split("-")[-1]
+                        currency = trade["currency"]
+                        if callOrPut == "C" or callOrPut == "P":
+                            text += '\n\n'
+                            text += f'{"🔴 Sold" if direction=="SELL" else "🟢 Bought"} {trade["size"]}x '
+                            text += f'{"🔶" if currency=="BTC" else "🔷"} {trade["symbol"]} {"📈" if callOrPut=="C" else "📉"} '
+                            text += f'at {trade["price"]} {"U" if trade["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"} (${trade["price"] if trade["source"].upper()=="BYBIT" else float(trade["price"])*float(trade["index_price"]):,.2f}) '
+                            text += f' {"‼️‼️" if (trade["currency"] == "BTC" and float(trade["size"]) >= 1000) or (trade["currency"] == "ETH" and float(trade["size"]) >= 10000) else ""}'
+                            text += '\n'
+                            text += f'📊 <b>Vol</b>: {str(trade["iv"])+"%"},'
+                            text += f' <b>Ref</b>: {"$"+str(trade["index_price"])}'
+                        else:
+                            text += '\n'
+                            text += f'{"🔴 Sold " if direction=="SELL" else "🟢 Bought "} {trade["size"]}x '
+                            text += f'{"🔶" if currency=="BTC" else "🔷"} {trade["symbol"]} '
+                            text += f'at ${float(trade["price"]):,.2f} '
+                            text += '\n\n'
+                            text += f'📊 <b>Ref</b>: {"$"+str(trade["index_price"])}'
+
                 else:
                     view = result["View"].values[0]
                     strategy_name = result["Strategy Name"].values[0]
+                    short_strategy_name = result["Short Strategy Name"].values[0].title()
                     # strategy_name = 'LONG CALL SPREAD' or 'SHORT CALL SPREAD', make strategy_name to be 'LONG {currency} CALL SPREAD' or 'SHORT {currency} CALL SPREAD'
                     if strategy_name.startswith("LONG"):
                         strategy_name = strategy_name.replace("LONG", f"LONG {trades[0]['currency']}")
+                        trade_summary = f'🟩 Bought {trades[0]["size"]}x {trades[0]["currency"]} '
                     elif strategy_name.startswith("SHORT"):
                         strategy_name = strategy_name.replace("SHORT", f"SHORT {trades[0]['currency']}")
+                        trade_summary = f'🟥 Sold {trades[0]["size"]}x {trades[0]["currency"]} '
+                        premium = -premium
 
                     if not pd.isna(view):
-                        text = f'<b>{strategy_name} ({view}) ({trades[0]["size"]}x)</b>'
+                        text = f'<b>{strategy_name} ({view}) ({trades[0]["size"]}x):</b>'
                     else:
-                        text = f'<b>{strategy_name} ({trades[0]["size"]}x)</b>'
-
-                # text += '\n'
-                # if id.decode('utf-8').startswith("midas_"):
-                #     # cut midas_
-                #     text += f"<b><i>📝 DERIBIT {id.decode('utf-8')[6:]}</i></b>"
-                # elif id.decode('utf-8').startswith("signalplus_"):
-                #     # cut signalplus_
-                #     text += f"<b><i>📝 DERIBIT {id.decode('utf-8')[11:]}</i></b>"
-                # elif id.decode('utf-8').startswith("playground_"):
-                #     # cut playground_
-                #     text += f"<b><i>📝 DERIBIT {id.decode('utf-8')[11:]}</i></b>"
-                # else:
-                #     text += f"<b><i>📝 DERIBIT {id.decode('utf-8')}</i></b>"
-                # text += '\n'
-                # text += f'<i>🕛 {datetime.fromtimestamp(int(trades[0]["timestamp"])//1000)} UTC</i>'
-
-                delta = 0
-                gamma = 0
-                vega = 0
-                theta = 0
-                rho = 0
-                for trade in trades:
-                    direction = trade["direction"].upper()
-                    callOrPut = trade["symbol"].split("-")[-1]
-                    currency = trade["currency"]
-                    if callOrPut == "C" or callOrPut == "P":
-                        text += '\n\n'
-                        text += f'{"🔴 Sold" if direction=="SELL" else "🟢 Bought"} {trade["size"]}x '
-                        text += f'{"🔶" if currency=="BTC" else "🔷"} {trade["symbol"]} {"📈" if callOrPut=="C" else "📉"} '
-                        text += f'at {trade["price"]} {"U" if trade["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"} (${trade["price"] if trade["source"].upper()=="BYBIT" else float(trade["price"])*float(trade["index_price"]):,.2f}) '
-                        text += f' {"‼️‼️" if (trade["currency"] == "BTC" and float(trade["size"]) >= 1000) or (trade["currency"] == "ETH" and float(trade["size"]) >= 10000) else ""}'
-                        text += '\n'
-                        text += f'📊 <b>Vol</b>: {str(trade["iv"])+"%"},'
-                        text += f' <b>Ref</b>: {"$"+str(trade["index_price"])}'
-                        # if greeks
-                        if "greeks" in trade:
-                            if direction == "BUY":
-                                size = float(trade["size"])
-                            else:
-                                size = -float(trade["size"])
-                            delta += size * float(trade["greeks"]["delta"])
-                            gamma += size * float(trade["greeks"]["gamma"])
-                            vega += size * float(trade["greeks"]["vega"])
-                            theta += size * float(trade["greeks"]["theta"])
-                            rho += size * float(trade["greeks"]["rho"])
-                    else:
-                        text += '\n'
-                        text += f'{"🔴 Sold " if direction=="SELL" else "🟢 Bought "} {trade["size"]}x '
-                        text += f'{"🔶" if currency=="BTC" else "🔷"} {trade["symbol"]} '
-                        text += f'at ${float(trade["price"]):,.2f} '
-                        text += '\n\n'
-                        text += f'📊 <b>Ref</b>: {"$"+str(trade["index_price"])}'
-                if delta != 0 or gamma != 0 or vega != 0 or theta != 0 or rho != 0:
+                        text = f'<b>{strategy_name} ({trades[0]["size"]}x):</b>'
                     text += '\n\n'
+                    text += f'{trade_summary}'
+                    text += f'{"/".join(expiries)} '
+                    text += f'{"/".join(strikes)} '
+                    text += f'{short_strategy_name} '
+                    text += f'at {premium} '
+                    text += f' {"‼️‼️" if (trades[0]["currency"] == "BTC" and float(trades[0]["size"]) >= 1000) or (trades[0]["currency"] == "ETH" and float(trades[0]["size"]) >= 10000) else ""}'
+                    text += '\n\n'
+                    text += f'📊 <b>Leg Prices</b>: {", ".join(prices)}'
+                    text += f' <b>Ref</b>: {"$"+str(data["index_price"])}'
+
+                if delta != 0 or gamma != 0 or vega != 0 or theta != 0 or rho != 0:
+                    text += '\n'
                     text += f'📖 <b>Greeks</b>: <i>Δ: {delta:,.5f}, Γ: {gamma:,.5f}, ν: {vega:,.5f}, Θ: {theta:,.5f}, ρ: {rho:,.5f}</i>'
                 text += '\n\n'
-                text += f'<i>DERIBIT</i>'
+                text += f'<i>Deribit</i>'
                 text += '\n'
                 text += f'<i>#block</i>'
                 # TODO paradigm
@@ -663,15 +676,15 @@ def generate_trade_message(data):
     if direction == "BUY":
         size = float(data["size"])
         if callOrPut == "C":
-            strategy = f"<b>LONG {currency} CALL ({size}x)</b>"
+            strategy = f"<b>LONG {currency} CALL ({size}x):</b>"
         elif callOrPut == "P":
-            strategy = f"<b>LONG {currency} PUT ({size}x)</b>"
+            strategy = f"<b>LONG {currency} PUT ({size}x):</b>"
     elif direction == "SELL":
         size = -float(data["size"])
         if callOrPut == "C":
-            strategy = f"<b>SHORT {currency} CALL ({data['size']}x)</b>"
+            strategy = f"<b>SHORT {currency} CALL ({data['size']}x):</b>"
         elif callOrPut == "P":
-            strategy = f"<b>SHORT {currency} PUT ({data['size']}x)</b>"
+            strategy = f"<b>SHORT {currency} PUT ({data['size']}x):</b>"
 
     text = strategy
     text += '\n'
@@ -683,7 +696,7 @@ def generate_trade_message(data):
     text += f'at {data["price"]} {"U" if data["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"} (${data["price"] if data["source"].upper()=="BYBIT" else float(data["price"])*float(data["index_price"]):,.2f}) '
     text += f' {"‼️‼️" if (data["currency"] == "BTC" and float(data["size"]) >= 1000) or (data["currency"] == "ETH" and float(data["size"]) >= 10000) else ""}'
     text += '\n\n'
-    text += f'📊 <b>Vol</b>: {str(data["iv"])+"%" if data["iv"] else "Unknown"},'
+    text += f'📊{" <b>Vol</b>: "+str(data["iv"])+"%," if data["iv"] else ""}'
     text += f' <b>Ref</b>: {"$"+str(data["index_price"]) if data["index_price"] else "Unknown"}'
     if "greeks" in data:
         text += '\n'
@@ -694,7 +707,7 @@ def generate_trade_message(data):
         rho = float(data["greeks"]["rho"]) * size
         text += f'📖 <b>Greeks</b>: <i>Δ: {delta:,.5f}, Γ: {gamma:,.5f}, ν: {vega:,.5f}, Θ: {theta:,.5f}, ρ: {rho:,.5f}</i>'
     text += '\n\n'
-    text += f'<i>{data["source"].upper()}</i>'
+    text += f'<i>{data["source"].title()}</i>'
     text += '\n'
     if "liquidation" in data and data["liquidation"]:
         text += f'<i>#liquidation</i>'
