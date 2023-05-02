@@ -557,6 +557,7 @@ async def push_block_trade_to_telegram():
                     elif strategy_name.startswith("SHORT"):
                         strategy_name = strategy_name.replace("SHORT", f"SHORT {trades[0]['currency']}")
                         trade_summary = f'🟥 Sold {trades[0]["size"]}x {trades[0]["currency"]} '
+                        premium = -premium
 
                     if not pd.isna(view):
                         text = f'<b>{strategy_name} ({view}) ({trades[0]["size"]}x):</b>'
