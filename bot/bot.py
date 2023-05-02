@@ -570,7 +570,7 @@ async def push_block_trade_to_telegram():
                     text += f' {"‼️‼️" if (trades[0]["currency"] == "BTC" and float(trades[0]["size"]) >= 1000) or (trades[0]["currency"] == "ETH" and float(trades[0]["size"]) >= 10000) else ""}'
                     text += '\n\n'
                     text += f'📊 <b>Leg Prices</b>: {", ".join(prices)}'
-                    text += f' <b>Ref</b>: {"$"+str(data["index_price"])}'
+                    text += f' <b>Ref</b>: {"$"+str(trades[0]["index_price"])}'
 
                 if delta != 0 or gamma != 0 or vega != 0 or theta != 0 or rho != 0:
                     text += '\n'
@@ -737,4 +737,3 @@ def run_bot() -> None:
 
 if __name__ == "__main__":
     run_bot()
-    
