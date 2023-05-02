@@ -563,7 +563,7 @@ async def push_block_trade_to_telegram():
                     text += '\n\n'
                     text += f'📖 <b>Greeks</b>: <i>Δ: {delta:,.5f}, Γ: {gamma:,.5f}, ν: {vega:,.5f}, Θ: {theta:,.5f}, ρ: {rho:,.5f}</i>'
                 text += '\n\n'
-                text += f'<i>DERIBIT (Powered by Paradigm)</i>'
+                text += f'<i>DERIBIT</i>'
                 text += '\n'
                 text += f'<i>#block</i>'
                 # TODO paradigm
@@ -694,7 +694,7 @@ def generate_trade_message(data):
         rho = float(data["greeks"]["rho"]) * size
         text += f'📖 <b>Greeks</b>: <i>Δ: {delta:,.5f}, Γ: {gamma:,.5f}, ν: {vega:,.5f}, Θ: {theta:,.5f}, ρ: {rho:,.5f}</i>'
     text += '\n\n'
-    text += f'<i>{data["source"].upper()} (Powered by Paradigm)</i>'
+    text += f'<i>{data["source"].upper()}</i>'
     text += '\n'
     if "liquidation" in data and data["liquidation"]:
         text += f'<i>#liquidation</i>'
