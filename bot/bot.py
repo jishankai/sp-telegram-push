@@ -372,7 +372,7 @@ async def push_block_trade_to_telegram():
                             size = float(trade["size"])
                         else:
                             size = -float(trade["size"])
-                        premium += float(trade["price"]) * float(size)
+                        premium += float(trade["price"]) * size
                         # if greeks
                         if "greeks" in trade:
                             delta += size * float(trade["greeks"]["delta"])
@@ -531,7 +531,7 @@ async def push_block_trade_to_telegram():
                             text += '\n\n'
                             text += f'{"🔴 Sold" if direction=="SELL" else "🟢 Bought"} {trade["size"]}x '
                             text += f'{"🔶" if currency=="BTC" else "🔷"} {trade["symbol"]} {"📈" if callOrPut=="C" else "📉"} '
-                            text += f'at {trade["price"]} {"U" if trade["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"} (${trade["price"] if trade["source"].upper()=="BYBIT" else float(trade["price"])*float(trade["index_price"]):,.2f}) '
+                            text += f'at {trade["price"]} {"₿" if currency=="BTC" else "Ξ"} (${float(trade["price"])*float(trade["index_price"]):,.2f}) '
                             text += f' {"‼️‼️" if (trade["currency"] == "BTC" and float(trade["size"]) >= 1000) or (trade["currency"] == "ETH" and float(trade["size"]) >= 10000) else ""}'
                             text += '\n'
                             text += f'📊 <b>Vol</b>: {str(trade["iv"])+"%"},'
@@ -548,6 +548,8 @@ async def push_block_trade_to_telegram():
                     view = result["View"].values[0]
                     strategy_name = result["Strategy Name"].values[0]
                     short_strategy_name = result["Short Strategy Name"].values[0].title()
+                    currency = trades[0]["currency"]
+                    index_price = trades[0]["index_price"]
                     # strategy_name = 'LONG CALL SPREAD' or 'SHORT CALL SPREAD', make strategy_name to be 'LONG {currency} CALL SPREAD' or 'SHORT {currency} CALL SPREAD'
                     if strategy_name.startswith("LONG"):
                         strategy_name = strategy_name.replace("LONG", f"LONG {trades[0]['currency']}")
@@ -555,22 +557,21 @@ async def push_block_trade_to_telegram():
                     elif strategy_name.startswith("SHORT"):
                         strategy_name = strategy_name.replace("SHORT", f"SHORT {trades[0]['currency']}")
                         trade_summary = f'🟥 Sold {trades[0]["size"]}x {trades[0]["currency"]} '
-                        premium = -premium
 
                     if not pd.isna(view):
                         text = f'<b>{strategy_name} ({view}) ({trades[0]["size"]}x):</b>'
                     else:
                         text = f'<b>{strategy_name} ({trades[0]["size"]}x):</b>'
-                    text += '\n\n'
+                    text += '\n'
                     text += f'{trade_summary}'
                     text += f'{"/".join(expiries)} '
                     text += f'{"/".join(strikes)} '
                     text += f'{short_strategy_name} '
-                    text += f'at {premium} '
+                    text += f'at {premium:,.6f} {"₿" if currency=="BTC" else "Ξ"} (${premium*float(index_price):,.2f}) '
                     text += f' {"‼️‼️" if (trades[0]["currency"] == "BTC" and float(trades[0]["size"]) >= 1000) or (trades[0]["currency"] == "ETH" and float(trades[0]["size"]) >= 10000) else ""}'
                     text += '\n\n'
                     text += f'📊 <b>Leg Prices</b>: {", ".join(prices)}'
-                    text += f' <b>Ref</b>: {"$"+str(trades[0]["index_price"])}'
+                    text += f' <b>Ref</b>: {"$"+str(index_price)}'
 
                 if delta != 0 or gamma != 0 or vega != 0 or theta != 0 or rho != 0:
                     text += '\n'
