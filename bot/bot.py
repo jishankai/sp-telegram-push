@@ -576,7 +576,7 @@ async def push_block_trade_to_telegram():
 
                 if delta != 0 or gamma != 0 or vega != 0 or theta != 0 or rho != 0:
                     text += '\n'
-                    text += f'📖 <b>Greeks</b>: <i>Δ: {delta:,.5f}, Γ: {gamma:,.5f}, ν: {vega:,.5f}, Θ: {theta:,.5f}, ρ: {rho:,.5f}</i>'
+                    text += f'📖 <b>Risks</b>: <i>Δ: {delta:,.2f}, Γ: {gamma:,.4f}, ν: {vega:,.2f}, Θ: {theta:,.2f}, ρ: {rho:,.2f}</i>'
                 text += '\n\n'
                 text += f'<i>Deribit</i>'
                 text += '\n'
@@ -707,7 +707,7 @@ def generate_trade_message(data):
         vega = float(data["greeks"]["vega"]) * size
         theta = float(data["greeks"]["theta"]) * size
         rho = float(data["greeks"]["rho"]) * size
-        text += f'📖 <b>Greeks</b>: <i>Δ: {delta:,.5f}, Γ: {gamma:,.5f}, ν: {vega:,.5f}, Θ: {theta:,.5f}, ρ: {rho:,.5f}</i>'
+        text += f'📖 <b>Risks</b>: <i>Δ: {delta:,.2f}, Γ: {gamma:,.4f}, ν: {vega:,.2f}, Θ: {theta:,.2f}, ρ: {rho:,.2f}</i>'
     text += '\n\n'
     text += f'<i>{data["source"].title()}</i>'
     text += '\n'
