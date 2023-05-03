@@ -357,7 +357,10 @@ async def push_block_trade_to_telegram():
                 vega = 0
                 theta = 0
                 rho = 0
+                index_price = trades[0]["index_price"]
 
+                # sort trades by distances between trade["price"] and index_price
+                trades = sorted(trades, key=lambda x: abs(float(x["price"]) - float(index_price)))
                 # trade["symbol"]可能是"BTC-28JUN21-40000-C", "BTC-28JUN21-40000-P", "ETH-28JUN21-4000-C", "ETH-28JUN21-4000-P", "ETH-PERPETUAL", "ETH-14APR23"等格式。分解trades数据，得到callOrPut, strike, expiry并重新存入trades数组中
                 for trade in trades:
                     if trade["symbol"].split("-")[-1] == "C" or trade["symbol"].split("-")[-1] == "P":
