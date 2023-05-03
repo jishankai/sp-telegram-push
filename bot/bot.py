@@ -490,6 +490,7 @@ async def push_block_trade_to_telegram():
                         chat_id=config.midas_group_chat_id,
                         text=text,
                         parse_mode=ParseMode.HTML,
+                        disable_web_page_preview=True,
                     )
                 elif id.decode('utf-8').startswith("signalplus_"):
                     for chat_id in config.signalplus_group_chat_ids:
@@ -497,18 +498,21 @@ async def push_block_trade_to_telegram():
                             chat_id=chat_id,
                             text=text,
                             parse_mode=ParseMode.HTML,
+                            disable_web_page_preview=True,
                         )
                 elif id.decode('utf-8').startswith("playground_"):
                     await bot.send_message(
                         chat_id=config.playground_group_chat_id,
                         text=text,
                         parse_mode=ParseMode.HTML,
+                        disable_web_page_preview=True,
                     )
                 else:
                     await bot.send_message(
                         chat_id=config.group_chat_id,
                         text=text,
                         parse_mode=ParseMode.HTML,
+                        disable_web_page_preview=True,
                     )
         except Exception as e:
             logger.error(f"Error5: {e}")
@@ -679,6 +683,7 @@ async def push_trade_to_telegram(group_chat_id):
                         chat_id=group_chat_id,
                         text=text,
                         parse_mode=ParseMode.HTML,
+                        disable_web_page_preview=True,
                     )
             elif group_chat_id == config.midas_group_chat_id:
                 data = redis_client.get_item('midas_trade_queue')
@@ -689,6 +694,7 @@ async def push_trade_to_telegram(group_chat_id):
                         chat_id=group_chat_id,
                         text=text,
                         parse_mode=ParseMode.HTML,
+                        disable_web_page_preview=True,
                     )
             elif group_chat_id in config.signalplus_group_chat_ids:
                 data = redis_client.get_item('signalplus_trade_queue')
@@ -700,6 +706,7 @@ async def push_trade_to_telegram(group_chat_id):
                             chat_id=chat_id,
                             text=text,
                             parse_mode=ParseMode.HTML,
+                            disable_web_page_preview=True,
                         )
             elif group_chat_id == config.playground_group_chat_id:
                 data = redis_client.get_item('playground_trade_queue')
@@ -710,6 +717,7 @@ async def push_trade_to_telegram(group_chat_id):
                         chat_id=group_chat_id,
                         text=text,
                         parse_mode=ParseMode.HTML,
+                        disable_web_page_preview=True,
                     )
         except Exception as e:
             logger.error(f"Error6: {e}")
