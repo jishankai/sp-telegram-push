@@ -359,8 +359,8 @@ async def push_block_trade_to_telegram():
                 rho = 0
                 index_price = trades[0]["index_price"]
 
-                # sort trades by distances between trade["price"] and index_price
-                trades = sorted(trades, key=lambda x: abs(float(x["price"]) - float(index_price)))
+                # sort trades by distances between trade["strike"] and index_price
+                trades = sorted(trades, key=lambda x: abs(float(x["symbol"].split("-")[-2]) - float(index_price)))
                 # trade["symbol"]可能是"BTC-28JUN21-40000-C", "BTC-28JUN21-40000-P", "ETH-28JUN21-4000-C", "ETH-28JUN21-4000-P", "ETH-PERPETUAL", "ETH-14APR23"等格式。分解trades数据，得到callOrPut, strike, expiry并重新存入trades数组中
                 for trade in trades:
                     if trade["symbol"].split("-")[-1] == "C" or trade["symbol"].split("-")[-1] == "P":
@@ -552,30 +552,53 @@ async def push_block_trade_to_telegram():
                     strategy_name = result["Strategy Name"].values[0]
                     short_strategy_name = result["Short Strategy Name"].values[0].title()
                     currency = trades[0]["currency"]
-                    index_price = trades[0]["index_price"]
                     # strategy_name = 'LONG CALL SPREAD' or 'SHORT CALL SPREAD', make strategy_name to be 'LONG {currency} CALL SPREAD' or 'SHORT {currency} CALL SPREAD'
                     if strategy_name.startswith("LONG"):
                         strategy_name = strategy_name.replace("LONG", f"LONG {trades[0]['currency']}")
-                        trade_summary = f'🟩 Bought {trades[0]["size"]}x {trades[0]["currency"]} '
+                        if size_ratio == "1:N" or size_ratio == "N:1":
+                            trades = sorted(trades, key=lambda x: abs(float(x["symbol"].split("-")[-2]) - float(index_price)))
+                            trade_summary = f'🟩 Bought {trades[0]["size"]}x/{trades[1]["size"]}x {trades[0]["currency"]} '
+                        else:
+                            trade_summary = f'🟩 Bought {trades[0]["size"]}x {trades[0]["currency"]} '
                     elif strategy_name.startswith("SHORT"):
                         strategy_name = strategy_name.replace("SHORT", f"SHORT {trades[0]['currency']}")
-                        trade_summary = f'🟥 Sold {trades[0]["size"]}x {trades[0]["currency"]} '
+                        if size_ratio == "1:N" or size_ratio == "N:1":
+                            trades = sorted(trades, key=lambda x: abs(float(x["symbol"].split("-")[-2]) - float(index_price)))
+                            trade_summary = f'🟥 Sold {trades[0]["size"]}x/{trades[1]["size"]}x {trades[0]["currency"]} '
+                        else:
+                            trade_summary = f'🟥 Sold {trades[0]["size"]}x {trades[0]["currency"]} '
                         premium = -premium
 
                     if not pd.isna(view):
-                        text = f'<b>{strategy_name} ({view}) ({trades[0]["size"]}x):</b>'
+                        if size_ratio == "1:N" or size_ratio == "N:1":
+                            text = f'<b>{strategy_name} ({view}) ({trades[0]["size"]}x/{trades[1]["size"]}x):</b>'
+                        else:
+                            text = f'<b>{strategy_name} ({view}) ({trades[0]["size"]}x):</b>'
                     else:
-                        text = f'<b>{strategy_name} ({trades[0]["size"]}x):</b>'
+                        if size_ratio == "1:N" or size_ratio == "N:1":
+                            text = f'<b>{strategy_name} ({trades[0]["size"]}x/{trades[1]["size"]}x):</b>'
+                        else:
+                            text = f'<b>{strategy_name} ({trades[0]["size"]}x):</b>'
                     text += '\n'
-                    text += f'{trade_summary}'
-                    text += f'{"/".join(expiries)} '
-                    text += f'{"/".join(strikes)} '
-                    text += f'{short_strategy_name} '
-                    text += f'at {premium:,.5f} {"₿" if currency=="BTC" else "Ξ"} (${premium*float(index_price):,.2f}) '
-                    text += f' {"‼️‼️" if (trades[0]["currency"] == "BTC" and float(trades[0]["size"]) >= 1000) or (trades[0]["currency"] == "ETH" and float(trades[0]["size"]) >= 10000) else ""}'
-                    text += '\n\n'
-                    text += f'📊 <b>Leg Prices</b>: {", ".join(prices)}'
-                    text += f' <b>Ref</b>: {"$"+str(index_price)}'
+                    if legs == 1:
+                        data = trades[0]
+                        text += f'{"🔴 Sold" if direction=="SELL" else "🟢 Bought"} {data["size"]}x '
+                        text += f'{"🔶" if currency=="BTC" else "🔷"} {data["symbol"]} {"📈" if callOrPut=="C" else "📉"} '
+                        text += f'at {data["price"]} {"U" if data["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"} (${data["price"] if data["source"].upper()=="BYBIT" else float(data["price"])*float(data["index_price"]):,.2f}) '
+                        text += f' {"‼️‼️" if (data["currency"] == "BTC" and float(data["size"]) >= 1000) or (data["currency"] == "ETH" and float(data["size"]) >= 10000) else ""}'
+                        text += '\n\n'
+                        text += f'📊{" <b>Vol</b>: "+str(data["iv"])+"%,"}'
+                        text += f' <b>Ref</b>: {"$"+str(data["index_price"])}'
+                    else:
+                        text += f'{trade_summary}'
+                        text += f'{"/".join(expiries)} '
+                        text += f'{"/".join(strikes)} '
+                        text += f'{short_strategy_name} '
+                        text += f'at {premium:,.5f} {"₿" if currency=="BTC" else "Ξ"} (${premium*float(index_price):,.2f}) '
+                        text += f' {"‼️‼️" if (trades[0]["currency"] == "BTC" and float(trades[0]["size"]) >= 1000) or (trades[0]["currency"] == "ETH" and float(trades[0]["size"]) >= 10000) else ""}'
+                        text += '\n\n'
+                        text += f'📊 <b>Leg Prices</b>: {", ".join(prices)}'
+                        text += f' <b>Ref</b>: {"$"+str(index_price)}'
 
                 if delta != 0 or gamma != 0 or vega != 0 or theta != 0 or rho != 0:
                     text += '\n'
