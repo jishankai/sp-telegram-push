@@ -349,7 +349,9 @@ async def push_block_trade_to_telegram():
 
             if trades:
                 strikes = []
+                strikes_seen = {}
                 expiries = []
+                expiries_seen = {}
                 prices = []
                 premium = 0
                 delta = 0
@@ -367,8 +369,12 @@ async def push_block_trade_to_telegram():
                         trade["callOrPut"] = trade["symbol"].split("-")[-1]
                         trade["strike"] = trade["symbol"].split("-")[-2]
                         trade["expiry"] = trade["symbol"].split("-")[-3]
-                        strikes.append(trade["strike"])
-                        expiries.append(trade["expiry"])
+                        if trade["strike"] not in strikes_seen:
+                            strikes.append(trade["strike"])
+                            strikes_seen[trade["strike"]] = True
+                        if trade["expiry"] not in expiries_seen:
+                            expiries.append(trade["expiry"])
+                            expiries_seen[trade["expiry"]] = True
                         prices.append(f'{trade["price"]}({str(trade["iv"])+"v"})')
                         direction = trade["direction"].upper()
                         if direction == "BUY":
@@ -388,8 +394,6 @@ async def push_block_trade_to_telegram():
                         trade["strike"] = None
                         trade["expiry"] = None
 
-                expiries = set(expiries)
-                strikes = set(strikes)
                 premium = premium / float(trades[0]["size"])
 
                 # sort trades by strike if strike is not None, else by callOrPut and its value P<C if callOrPut is not none, else by expiry
