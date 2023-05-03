@@ -453,6 +453,9 @@ async def push_block_trade_to_telegram():
                     text += '\n'
                     if legs == 1:
                         data = trades[0]
+                        direction = data["direction"].upper()
+                        callOrPut = data["symbol"].split("-")[-1]
+
                         text += f'{"🔴 Sold" if direction=="SELL" else "🟢 Bought"} {data["size"]}x '
                         text += f'{"🔶" if currency=="BTC" else "🔷"} {data["symbol"]} {"📈" if callOrPut=="C" else "📉"} '
                         text += f'at {data["price"]} {"U" if data["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"} (${data["price"] if data["source"].upper()=="BYBIT" else float(data["price"])*float(data["index_price"]):,.2f}) '
