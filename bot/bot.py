@@ -658,15 +658,15 @@ def get_block_trade_strategy(trades):
         sideD = "+D" if trades[3]["direction"].upper() == "BUY" else "-D"
         side = sideA + sideB + sideC + sideD
 
-        # 根据参数查询策略名称和视图
-        result = deribit_combo.loc[(deribit_combo["Legs"]==legs) &
-                                   (deribit_combo["Contract Type"]==contract_type) &
-                                   (deribit_combo["Strike"]==strike) &
-                                   (deribit_combo["Expiry"]==expiry) &
-                                   (deribit_combo["Size Ratio"]==size_ratio) &
-                                   (deribit_combo["Side"]==side)]
+    # 根据参数查询策略名称和视图
+    result = deribit_combo.loc[(deribit_combo["Legs"]==legs) &
+                               (deribit_combo["Contract Type"]==contract_type) &
+                               (deribit_combo["Strike"]==strike) &
+                               (deribit_combo["Expiry"]==expiry) &
+                               (deribit_combo["Size Ratio"]==size_ratio) &
+                               (deribit_combo["Side"]==side)]
 
-        return result, size_ratio, legs
+    return result, size_ratio, legs
 
 
 # Define a function to send the data with prettify format to Telegram group
