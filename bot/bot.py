@@ -1,15 +1,12 @@
 import logging
-import traceback
-import json
 import requests
-from datetime import datetime
 import asyncio
 import time
 import os
 import pandas as pd
 
 import telegram
-from telegram.constants import ParseMode, ChatAction
+from telegram.constants import ParseMode
 
 import config
 import redis_client
@@ -396,137 +393,7 @@ async def push_block_trade_to_telegram():
 
                 premium = premium / float(trades[0]["size"])
 
-                # sort trades by strike if strike is not None, else by callOrPut and its value P<C if callOrPut is not none, else by expiry
-                trades = sorted(trades, key=lambda x: (x["strike"] is None, x["strike"], x["callOrPut"] is None, x["callOrPut"] == "C", x["callOrPut"] == "P", x["expiry"] is None, x["expiry"]))
-
-                # analyse trades to get legs, contract_type, strike, expiry, size_ratio, side
-                legs = len(trades)
-                contract_type = "N"
-                strike = "N"
-                expiry = "N"
-                size_ratio = "N"
-                side = "N"
-                if legs == 1:
-                    contract_type = trades[0]["callOrPut"]
-                    size_ratio = "1"
-                    side = "A" if trades[0]["direction"].upper() == "BUY" else "-A"
-                elif legs == 2:
-                    # contract_type
-                    if trades[0]["callOrPut"] is None or trades[1]["callOrPut"] is None:
-                        contract_type = "F"
-                    elif trades[0]["callOrPut"] == trades[1]["callOrPut"] == "C":
-                        contract_type = "C"
-                    elif trades[0]["callOrPut"] == trades[1]["callOrPut"] == "P":
-                        contract_type = "P"
-                    elif (trades[0]["callOrPut"] == "P" and trades[1]["callOrPut"] == "C") or (trades[0]["callOrPut"] == "C" and trades[1]["callOrPut"] == "P"):
-                        contract_type = "PC"
-                    # strike
-                    if contract_type=="F" or trades[0]["strike"] is None or trades[1]["strike"] is None:
-                        strike = "N"
-                    elif trades[0]["strike"] < trades[1]["strike"]:
-                        strike = "A<B"
-                    elif trades[0]["strike"] == trades[1]["strike"]:
-                        strike = "A=B"
-                    else:
-                        strike = "A>B"
-                    # expiry
-                    if contract_type=="F" or trades[0]["expiry"] is None or trades[1]["expiry"] is None:
-                        expiry = "N"
-                    elif trades[0]["expiry"] == trades[1]["expiry"]:
-                        expiry = "A=B"
-                    elif trades[0]["expiry"] < trades[1]["expiry"]:
-                        expiry = "A<B"
-                    else:
-                        expiry = "A>B"
-                    # size_ratio
-                    if contract_type=="F" or trades[0]["size"] is None or trades[1]["size"] is None:
-                        size_ratio = "N"
-                    elif trades[0]["size"] == trades[1]["size"]:
-                        size_ratio = "1:1"
-                    elif trades[0]["size"] < trades[1]["size"]:
-                        size_ratio = "1:N"
-                    else:
-                        size_ratio = "N:1"
-                    # side
-                    if contract_type=="F":
-                        side = "N"
-                    else:
-                        sideA = "A" if trades[0]["direction"].upper() == "BUY" else "-A"
-                        sideB = "+B" if trades[1]["direction"].upper() == "BUY" else "-B"
-                        side = sideA + sideB
-                elif legs == 3:
-                    # contract_type
-                    if trades[0]["callOrPut"] == trades[1]["callOrPut"] == trades[2]["callOrPut"] == "C":
-                        contract_type = "C"
-                    elif trades[0]["callOrPut"] == trades[1]["callOrPut"] == trades[2]["callOrPut"] == "P":
-                        contract_type = "P"
-                    # strike
-                    if trades[0]["strike"] is None or trades[1]["strike"] is None or trades[2]["strike"] is None:
-                        strike = "N"
-                    elif trades[0]["strike"] < trades[1]["strike"] < trades[2]["strike"]:
-                        strike = "A<B<C"
-                    elif trades[0]["strike"] == trades[1]["strike"] < trades[2]["strike"]:
-                        strike = "A=B<C"
-                    elif trades[0]["strike"] < trades[1]["strike"] == trades[2]["strike"]:
-                        strike = "A<B=C"
-                    elif trades[0]["strike"] == trades[1]["strike"] == trades[2]["strike"]:
-                        strike = "A=B=C"
-                    # expiry
-                    if trades[0]["expiry"] is None or trades[1]["expiry"] is None or trades[2]["expiry"] is None:
-                        expiry = "N"
-                    elif trades[0]["expiry"] == trades[1]["expiry"] == trades[2]["expiry"]:
-                        expiry = "A=B=C"
-                    elif trades[0]["expiry"] < trades[1]["expiry"] < trades[2]["expiry"]:
-                        expiry = "A<B<C"
-                    elif trades[0]["expiry"] == trades[1]["expiry"] < trades[2]["expiry"]:
-                        expiry = "A=B<C"
-                    elif trades[0]["expiry"] < trades[1]["expiry"] == trades[2]["expiry"]:
-                        expiry = "A<B=C"
-                    elif trades[0]["expiry"] < trades[1]["expiry"] > trades[2]["expiry"]:
-                        expiry = "A>B>C"
-                    # size_ratio: "1:2:1" or None
-                    if trades[0]["size"]*2 == trades[1]["size"] == trades[2]["size"]*2:
-                        size_ratio = "1:2:1"
-                    # side
-                    sideA = "A" if trades[0]["direction"].upper() == "BUY" else "-A"
-                    sideB = "+B" if trades[1]["direction"].upper() == "BUY" else "-B"
-                    sideC = "+C" if trades[2]["direction"].upper() == "BUY" else "-C"
-                    side = sideA + sideB + sideC
-                elif legs == 4:
-                    # contract_type: "C", "P", "PPCC", None
-                    if trades[0]["callOrPut"] == trades[1]["callOrPut"] == trades[2]["callOrPut"] == trades[3]["callOrPut"] == "C":
-                        contract_type = "C"
-                    elif trades[0]["callOrPut"] == trades[1]["callOrPut"] == trades[2]["callOrPut"] == trades[3]["callOrPut"] == "P":
-                        contract_type = "P"
-                    elif trades[0]["callOrPut"] == trades[1]["callOrPut"] == "P" and trades[2]["callOrPut"] == trades[3]["callOrPut"] == "C":
-                        contract_type = "PPCC"
-                    # strike: "A<B<C<D", "A<B=C<D" or None
-                    if trades[0]["strike"] is None or trades[1]["strike"] is None or trades[2]["strike"] is None or trades[3]["strike"] is None:
-                        strike = "N"
-                    elif trades[0]["strike"] < trades[1]["strike"] < trades[2]["strike"] < trades[3]["strike"]:
-                        strike = "A<B<C<D"
-                    elif trades[0]["strike"] < trades[1]["strike"] == trades[2]["strike"] < trades[3]["strike"]:
-                        strike = "A<B=C<D"
-                    # expiry: "A=B=C=D" or None
-                    if trades[0]["expiry"] == trades[1]["expiry"] == trades[2]["expiry"] == trades[3]["expiry"]:
-                        expiry = "A=B=C=D"
-                    # size_ratio: "1:1:1:1" or None
-                    if trades[0]["size"] == trades[1]["size"] == trades[2]["size"] == trades[3]["size"]:
-                        size_ratio = "1:1:1:1"
-                        # side
-                    sideA = "A" if trades[0]["direction"].upper() == "BUY" else "-A"
-                    sideB = "+B" if trades[1]["direction"].upper() == "BUY" else "-B"
-                    sideC = "+C" if trades[2]["direction"].upper() == "BUY" else "-C"
-                    sideD = "+D" if trades[3]["direction"].upper() == "BUY" else "-D"
-                    side = sideA + sideB + sideC + sideD
-
-                # 根据参数查询策略名称和视图
-                result = deribit_combo.loc[(deribit_combo["Legs"]==legs) &
-                                (deribit_combo["Contract Type"]==contract_type) &
-                                (deribit_combo["Strike"]==strike) &
-                                (deribit_combo["Expiry"]==expiry) &
-                                (deribit_combo["Size Ratio"]==size_ratio) &
-                                (deribit_combo["Side"]==side)]
+                result, size_ratio, legs = get_block_trade_strategy(trades)
                 # 输出结果
                 if result.empty:
                     text = f"<b>CUSTOM {trades[0]['currency']} STRATEGY:</b>"
@@ -646,6 +513,155 @@ async def push_block_trade_to_telegram():
             continue
         # Wait for 10 second before fetching data again
         await asyncio.sleep(5)
+
+
+def get_block_trade_strategy(trades):
+    # sort trades by strike if strike is not None, else by callOrPut and its value P<C if callOrPut is not none, else by expiry
+    trades = sorted(trades, key=lambda x: (x["strike"] is None, x["strike"], x["callOrPut"] is None, x["callOrPut"] == "C", x["callOrPut"] == "P", x["expiry"] is None, x["expiry"]))
+
+    # analyse trades to get legs, contract_type, strike, expiry, size_ratio, side
+    legs = len(trades)
+    contract_type = "N"
+    strike = "N"
+    expiry = "N"
+    size_ratio = "N"
+    side = "N"
+    if legs == 1:
+        contract_type = trades[0]["callOrPut"]
+        size_ratio = "1"
+        side = "A" if trades[0]["direction"].upper() == "BUY" else "-A"
+    elif legs == 2:
+        # contract_type
+        if trades[0]["callOrPut"] is None or trades[1]["callOrPut"] is None:
+            contract_type = "F"
+        elif trades[0]["callOrPut"] == trades[1]["callOrPut"] == "C":
+            contract_type = "C"
+        elif trades[0]["callOrPut"] == trades[1]["callOrPut"] == "P":
+            contract_type = "P"
+        elif (trades[0]["callOrPut"] == "P" and trades[1]["callOrPut"] == "C") or (trades[0]["callOrPut"] == "C" and trades[1]["callOrPut"] == "P"):
+            contract_type = "PC"
+
+        # strike
+        if contract_type=="F" or trades[0]["strike"] is None or trades[1]["strike"] is None:
+            strike = "N"
+        elif trades[0]["strike"] < trades[1]["strike"]:
+            strike = "A<B"
+        elif trades[0]["strike"] == trades[1]["strike"]:
+            strike = "A=B"
+        else:
+            strike = "A>B"
+
+        # expiry
+        if contract_type=="F" or trades[0]["expiry"] is None or trades[1]["expiry"] is None:
+            expiry = "N"
+        elif trades[0]["expiry"] == trades[1]["expiry"]:
+            expiry = "A=B"
+        elif trades[0]["expiry"] < trades[1]["expiry"]:
+            expiry = "A<B"
+        else:
+            expiry = "A>B"
+
+        # size_ratio
+        if contract_type=="F" or trades[0]["size"] is None or trades[1]["size"] is None:
+            size_ratio = "N"
+        elif trades[0]["size"] == trades[1]["size"]:
+            size_ratio = "1:1"
+        elif trades[0]["size"] < trades[1]["size"]:
+            size_ratio = "1:N"
+        else:
+            size_ratio = "N:1"
+
+        # side
+        if contract_type=="F":
+            side = "N"
+        else:
+            sideA = "A" if trades[0]["direction"].upper() == "BUY" else "-A"
+            sideB = "+B" if trades[1]["direction"].upper() == "BUY" else "-B"
+            side = sideA + sideB
+    elif legs == 3:
+        # contract_type
+        if trades[0]["callOrPut"] == trades[1]["callOrPut"] == trades[2]["callOrPut"] == "C":
+            contract_type = "C"
+        elif trades[0]["callOrPut"] == trades[1]["callOrPut"] == trades[2]["callOrPut"] == "P":
+            contract_type = "P"
+
+        # strike
+        if trades[0]["strike"] is None or trades[1]["strike"] is None or trades[2]["strike"] is None:
+            strike = "N"
+        elif trades[0]["strike"] < trades[1]["strike"] < trades[2]["strike"]:
+            strike = "A<B<C"
+        elif trades[0]["strike"] == trades[1]["strike"] < trades[2]["strike"]:
+            strike = "A=B<C"
+        elif trades[0]["strike"] < trades[1]["strike"] == trades[2]["strike"]:
+            strike = "A<B=C"
+        elif trades[0]["strike"] == trades[1]["strike"] == trades[2]["strike"]:
+            strike = "A=B=C"
+
+        # expiry
+        if trades[0]["expiry"] is None or trades[1]["expiry"] is None or trades[2]["expiry"] is None:
+            expiry = "N"
+        elif trades[0]["expiry"] == trades[1]["expiry"] == trades[2]["expiry"]:
+            expiry = "A=B=C"
+        elif trades[0]["expiry"] < trades[1]["expiry"] < trades[2]["expiry"]:
+            expiry = "A<B<C"
+        elif trades[0]["expiry"] == trades[1]["expiry"] < trades[2]["expiry"]:
+            expiry = "A=B<C"
+        elif trades[0]["expiry"] < trades[1]["expiry"] == trades[2]["expiry"]:
+            expiry = "A<B=C"
+        elif trades[0]["expiry"] < trades[1]["expiry"] > trades[2]["expiry"]:
+            expiry = "A>B>C"
+
+        # size_ratio: "1:2:1" or None
+        if trades[0]["size"]*2 == trades[1]["size"] == trades[2]["size"]*2:
+            size_ratio = "1:2:1"
+
+        # side
+        sideA = "A" if trades[0]["direction"].upper() == "BUY" else "-A"
+        sideB = "+B" if trades[1]["direction"].upper() == "BUY" else "-B"
+        sideC = "+C" if trades[2]["direction"].upper() == "BUY" else "-C"
+        side = sideA + sideB + sideC
+    elif legs == 4:
+        # contract_type: "C", "P", "PPCC", None
+        if trades[0]["callOrPut"] == trades[1]["callOrPut"] == trades[2]["callOrPut"] == trades[3]["callOrPut"] == "C":
+            contract_type = "C"
+        elif trades[0]["callOrPut"] == trades[1]["callOrPut"] == trades[2]["callOrPut"] == trades[3]["callOrPut"] == "P":
+            contract_type = "P"
+        elif trades[0]["callOrPut"] == trades[1]["callOrPut"] == "P" and trades[2]["callOrPut"] == trades[3]["callOrPut"] == "C":
+            contract_type = "PPCC"
+
+        # strike: "A<B<C<D", "A<B=C<D" or None
+        if trades[0]["strike"] is None or trades[1]["strike"] is None or trades[2]["strike"] is None or trades[3]["strike"] is None:
+            strike = "N"
+        elif trades[0]["strike"] < trades[1]["strike"] < trades[2]["strike"] < trades[3]["strike"]:
+            strike = "A<B<C<D"
+        elif trades[0]["strike"] < trades[1]["strike"] == trades[2]["strike"] < trades[3]["strike"]:
+            strike = "A<B=C<D"
+
+        # expiry: "A=B=C=D" or None
+        if trades[0]["expiry"] == trades[1]["expiry"] == trades[2]["expiry"] == trades[3]["expiry"]:
+            expiry = "A=B=C=D"
+
+        # size_ratio: "1:1:1:1" or None
+        if trades[0]["size"] == trades[1]["size"] == trades[2]["size"] == trades[3]["size"]:
+            size_ratio = "1:1:1:1"
+
+        # side
+        sideA = "A" if trades[0]["direction"].upper() == "BUY" else "-A"
+        sideB = "+B" if trades[1]["direction"].upper() == "BUY" else "-B"
+        sideC = "+C" if trades[2]["direction"].upper() == "BUY" else "-C"
+        sideD = "+D" if trades[3]["direction"].upper() == "BUY" else "-D"
+        side = sideA + sideB + sideC + sideD
+
+        # 根据参数查询策略名称和视图
+        result = deribit_combo.loc[(deribit_combo["Legs"]==legs) &
+                                   (deribit_combo["Contract Type"]==contract_type) &
+                                   (deribit_combo["Strike"]==strike) &
+                                   (deribit_combo["Expiry"]==expiry) &
+                                   (deribit_combo["Size Ratio"]==size_ratio) &
+                                   (deribit_combo["Side"]==side)]
+
+        return result, size_ratio, legs
+
 
 # Define a function to send the data with prettify format to Telegram group
 async def push_trade_to_telegram(group_chat_id):
