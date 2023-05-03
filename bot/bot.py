@@ -478,6 +478,8 @@ async def push_block_trade_to_telegram():
                 text += f'<i>Deribit</i>'
                 text += '\n'
                 text += f'<i>#block</i>'
+                text += '\n'
+                text += f'👉 Want Best Execution? <a href="https://pdgm.co/3ABtI6m">Paradigm</a> is 100% FREE and offers block liquidity in SIZE!'
                 # TODO paradigm
                 # if redis_client.is_paradigm_trade_timestamp_member(trades[0]["timestamp"]):
                 #     text += f'<i> 👉 Block trades on <a href="https://www.paradigm.co">paradigm</a></i>'
@@ -761,6 +763,8 @@ def generate_trade_message(data):
         text += f'<i>#liquidation</i>'
     else:
         text += f'<i>#onscreen</i>'
+    text += '\n'
+    text += f'👉 Want Best Execution? <a href="https://pdgm.co/3ABtI6m">Paradigm</a> is 100% FREE and offers block liquidity in SIZE!'
     return text
 
 def run_bot() -> None:
