@@ -397,13 +397,12 @@ async def push_block_trade_to_telegram():
                 result, size_ratio, legs = get_block_trade_strategy(trades)
                 # 输出结果
                 if result.empty:
-                    text = f"<b>CUSTOM {trades[0]['currency']} STRATEGY:</b>"
-                    # push trade to SignalPlus
-                    await push_trade_to_signalplus(f"{trades[0]['currency']} CUSTOM STRATEGY", trades)
+                    currency = trades[0]["currency"]
+                    strategy_name = "CUSTOM STRATEGY"
+                    text = f"<b>CUSTOM {currency} STRATEGY:</b>"
                     for trade in trades:
                         direction = trade["direction"].upper()
                         callOrPut = trade["symbol"].split("-")[-1]
-                        currency = trade["currency"]
                         if callOrPut == "C" or callOrPut == "P":
                             text += '\n\n'
                             text += f'{"🔴 Sold" if direction=="SELL" else "🟢 Bought"} {trade["size"]}x '
@@ -426,8 +425,6 @@ async def push_block_trade_to_telegram():
                     strategy_name = result["Strategy Name"].values[0]
                     short_strategy_name = result["Short Strategy Name"].values[0].title()
                     currency = trades[0]["currency"]
-                    # push trade to SignalPlus
-                    await push_trade_to_signalplus(f"{currency} {strategy_name}", trades)
                     # strategy_name = 'LONG CALL SPREAD' or 'SHORT CALL SPREAD', make strategy_name to be 'LONG {currency} CALL SPREAD' or 'SHORT {currency} CALL SPREAD'
                     if strategy_name.startswith("LONG"):
                         strategy_name = strategy_name.replace("LONG", f"LONG {trades[0]['currency']}")
@@ -516,6 +513,9 @@ async def push_block_trade_to_telegram():
                         disable_web_page_preview=True,
                     )
                 else:
+                    # push trade to SignalPlus
+                    await push_trade_to_signalplus(f"{currency} {strategy_name}", trades)
+                    # push trade to Telegram
                     await bot.send_message(
                         chat_id=config.group_chat_id,
                         text=text,
