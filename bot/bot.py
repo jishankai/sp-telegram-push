@@ -21,6 +21,7 @@ DERIBIT_TICKER_API = "https://www.deribit.com/api/v2/public/ticker"
 BYBIT_TRADE_API = "https://api-testnet.bybit.com/v5/market/recent-trade"
 BYBIT_SYMBOL_API = "https://api-testnet.bybit.com/v5/market/instruments-info"
 OKX_TRADE_API = "https://www.okx.com/api/v5/public/option-trades"
+SIGNALPLUS_PUSH_TRADE_API = "https://mizar-gateway.signalplus.net/mizar/data/bus/save/trade"
 
 redis_client = redis_client.RedisClient()
 bot = telegram.Bot(token=config.telegram_token)
@@ -397,6 +398,8 @@ async def push_block_trade_to_telegram():
                 # 输出结果
                 if result.empty:
                     text = f"<b>CUSTOM {trades[0]['currency']} STRATEGY:</b>"
+                    # push trade to SignalPlus
+                    await push_trade_to_signalplus(f"{trades[0]['currency']} CUSTOM STRATEGY", trades)
                     for trade in trades:
                         direction = trade["direction"].upper()
                         callOrPut = trade["symbol"].split("-")[-1]
@@ -423,6 +426,8 @@ async def push_block_trade_to_telegram():
                     strategy_name = result["Strategy Name"].values[0]
                     short_strategy_name = result["Short Strategy Name"].values[0].title()
                     currency = trades[0]["currency"]
+                    # push trade to SignalPlus
+                    await push_trade_to_signalplus(f"{currency} {strategy_name}", trades)
                     # strategy_name = 'LONG CALL SPREAD' or 'SHORT CALL SPREAD', make strategy_name to be 'LONG {currency} CALL SPREAD' or 'SHORT {currency} CALL SPREAD'
                     if strategy_name.startswith("LONG"):
                         strategy_name = strategy_name.replace("LONG", f"LONG {trades[0]['currency']}")
@@ -680,7 +685,10 @@ async def push_trade_to_telegram(group_chat_id):
             if group_chat_id == config.group_chat_id:
                 data = redis_client.get_item('bigsize_trade_queue')
                 if data:
-                    text = generate_trade_message(data)
+                    text, strategy_name = generate_trade_message(data)
+                    # push trade to SignalPlus
+                    await push_trade_to_signalplus(strategy_name, [data])
+
                     # Send the data to Telegram group
                     await bot.send_message(
                         chat_id=group_chat_id,
@@ -691,7 +699,7 @@ async def push_trade_to_telegram(group_chat_id):
             elif group_chat_id == config.midas_group_chat_id:
                 data = redis_client.get_item('midas_trade_queue')
                 if data:
-                    text = generate_trade_message(data)
+                    text, _ = generate_trade_message(data)
                     # Send the data to Telegram group
                     await bot.send_message(
                         chat_id=group_chat_id,
@@ -702,7 +710,7 @@ async def push_trade_to_telegram(group_chat_id):
             elif group_chat_id in config.signalplus_group_chat_ids:
                 data = redis_client.get_item('signalplus_trade_queue')
                 if data:
-                    text = generate_trade_message(data)
+                    text, _ = generate_trade_message(data)
                     for chat_id in config.signalplus_group_chat_ids:
                         # Send the data to Telegram group
                         await bot.send_message(
@@ -714,7 +722,7 @@ async def push_trade_to_telegram(group_chat_id):
             elif group_chat_id == config.playground_group_chat_id:
                 data = redis_client.get_item('playground_trade_queue')
                 if data:
-                    text = generate_trade_message(data)
+                    text, _ = generate_trade_message(data)
                     # Send the data to Telegram group
                     await bot.send_message(
                         chat_id=group_chat_id,
@@ -728,6 +736,7 @@ async def push_trade_to_telegram(group_chat_id):
         # Wait for 5 second before fetching data again
         await asyncio.sleep(5)
 
+
 # generate a message with trade data
 def generate_trade_message(data):
     direction = data["direction"].upper()
@@ -737,14 +746,18 @@ def generate_trade_message(data):
     if direction == "BUY":
         size = float(data["size"])
         if callOrPut == "C":
+            strategy_name = f"{currency} LONG CALL"
             strategy = f"<b>LONG {currency} CALL ({size}x):</b>"
         elif callOrPut == "P":
+            strategy_name = f"{currency} LONG PUT"
             strategy = f"<b>LONG {currency} PUT ({size}x):</b>"
     elif direction == "SELL":
         size = -float(data["size"])
         if callOrPut == "C":
+            strategy_name = f"{currency} SHORT CALL"
             strategy = f"<b>SHORT {currency} CALL ({data['size']}x):</b>"
         elif callOrPut == "P":
+            strategy_name = f"{currency} SHORT PUT"
             strategy = f"<b>SHORT {currency} PUT ({data['size']}x):</b>"
 
     text = strategy
@@ -776,7 +789,33 @@ def generate_trade_message(data):
         text += f'<i>#onscreen</i>'
     text += '\n'
     text += f'👉 Want Best Execution? <a href="https://pdgm.co/3ABtI6m">Paradigm</a> is 100% FREE and offers block liquidity in SIZE!'
-    return text
+    return text, strategy_name
+
+
+# push data to signalplus server
+async def push_trade_to_signalplus(strategy_name, trades):
+    headers = {
+        "Content-Type" : "application/json"
+    }
+    req_body = {
+        "accessKey": config.signalplus_push_trade_key,
+        "secretKey": config.signalplus_push_trade_secret,
+        "strategy_name": strategy_name,
+        "trades": trades
+    }
+
+    try:
+        response = requests.post(SIGNALPLUS_PUSH_TRADE_API, headers=headers, json=req_body)
+    except Exception as e:
+        logger.error(e)
+        return
+
+    rsp_dict = response.json()
+    code = rsp_dict.get("code", -1)
+    if code != 0:
+        logger.error(f"SignalPlus Error: failed to push blocktrade to SignalPlus , code = {code}")
+
+
 
 def run_bot() -> None:
     # Create two threads to fetch block trade data and send it to Telegram group by using asyncio
