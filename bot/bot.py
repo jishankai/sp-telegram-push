@@ -396,10 +396,15 @@ async def push_block_trade_to_telegram():
 
                 result, size_ratio, legs = get_block_trade_strategy(trades)
                 # 输出结果
-                if result.empty:
+                if result.empty or result["Strategy Name"].values[0] == "FUTURES SPREAD":
                     currency = trades[0]["currency"]
-                    strategy_name = "CUSTOM STRATEGY"
-                    text = f"<b>CUSTOM {currency} STRATEGY:</b>"
+                    if result.empty:
+                        strategy_name = "CUSTOM STRATEGY"
+                        text = f"<b>CUSTOM {currency} STRATEGY:</b>"
+                    else:
+                        strategy_name = "FUTURES SPREAD"
+                        text = f"<b>{currency} {strategy_name}:</b>"
+
                     for trade in trades:
                         direction = trade["direction"].upper()
                         callOrPut = trade["symbol"].split("-")[-1]
@@ -430,16 +435,16 @@ async def push_block_trade_to_telegram():
                         strategy_name = strategy_name.replace("LONG", f"LONG {trades[0]['currency']}")
                         if size_ratio == "1:N" or size_ratio == "N:1":
                             trades = sorted(trades, key=lambda x: abs(float(x["symbol"].split("-")[-2]) - float(index_price)))
-                            trade_summary = f'🟩 Bought {trades[0]["size"]}x/{trades[1]["size"]}x {trades[0]["currency"]} '
+                            trade_summary = f'🟩 Bought {trades[0]["size"]}x/{trades[1]["size"]}x {"🔶" if currency=="BTC" else "🔷"} {trades[0]["currency"]} '
                         else:
-                            trade_summary = f'🟩 Bought {trades[0]["size"]}x {trades[0]["currency"]} '
+                            trade_summary = f'🟩 Bought {trades[0]["size"]}x {"🔶" if currency=="BTC" else "🔷"} {trades[0]["currency"]} '
                     elif strategy_name.startswith("SHORT"):
                         strategy_name = strategy_name.replace("SHORT", f"SHORT {trades[0]['currency']}")
                         if size_ratio == "1:N" or size_ratio == "N:1":
                             trades = sorted(trades, key=lambda x: abs(float(x["symbol"].split("-")[-2]) - float(index_price)))
-                            trade_summary = f'🟥 Sold {trades[0]["size"]}x/{trades[1]["size"]}x {trades[0]["currency"]} '
+                            trade_summary = f'🟥 Sold {trades[0]["size"]}x/{trades[1]["size"]}x {"🔶" if currency=="BTC" else "🔷"} {trades[0]["currency"]} '
                         else:
-                            trade_summary = f'🟥 Sold {trades[0]["size"]}x {trades[0]["currency"]} '
+                            trade_summary = f'🟥 Sold {trades[0]["size"]}x {"🔶" if currency=="BTC" else "🔷"} {trades[0]["currency"]} '
                         premium = -premium
 
                     if not pd.isna(view):
