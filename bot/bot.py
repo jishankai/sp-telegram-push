@@ -307,7 +307,7 @@ async def handle_trade_data():
             # Pop data from Redis
             data = redis_client.get_trade()
             if data:
-                logger.error(f"Pop data from Redis: {data}")
+                # logger.error(f"Pop data from Redis: {data}")
                 # Check if the size is >=25 or >=250
                 if data["currency"] == "BTC" and float(data["size"]) >= 25:
                     redis_client.put_item(data, 'bigsize_trade_queue')
