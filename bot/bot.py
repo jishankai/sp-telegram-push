@@ -858,7 +858,7 @@ def run_bot() -> None:
         loop.create_task(push_trade_to_telegram(config.signalplus_group_chat_ids[0]))
         loop.create_task(push_trade_to_telegram(config.playground_group_chat_id))
         loop.create_task(push_block_trade_to_telegram())
-        loop.create_task(push_advertisement_to_groups())
+        # loop.create_task(push_advertisement_to_groups())
         loop.run_forever()
     except Exception as e:
         logger.error(e)
