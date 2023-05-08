@@ -489,9 +489,9 @@ async def push_block_trade_to_telegram():
                 text += '\n'
                 text += f'<i>#block</i>'
                 # if timestamp in seconds of now % 3 is zero, add the text below
-                if int(time.time()) % 3 == 0:
-                    text += '\n'
-                    text += f'👉 Want Best Execution? <a href="https://pdgm.co/3ABtI6m">Paradigm</a> is 100% FREE and offers block liquidity in SIZE!'
+                # if int(time.time()) % 3 == 0:
+                #     text += '\n'
+                #     text += f'👉 Want Best Execution? <a href="https://pdgm.co/3ABtI6m">Paradigm</a> is 100% FREE and offers block liquidity in SIZE!'
                 # TODO paradigm
                 # if redis_client.is_paradigm_trade_timestamp_member(trades[0]["timestamp"]):
                 #     text += f'<i> 👉 Block trades on <a href="https://www.paradigm.co">paradigm</a></i>'
@@ -534,6 +534,23 @@ async def push_block_trade_to_telegram():
             continue
         # Wait for 10 second before fetching data again
         await asyncio.sleep(5)
+
+
+async def push_advertisement_to_groups():
+    while True:
+        try:
+            text = f'<b>🚀<a href="https://pdgm.co/3ABtI6m">Paradigm</a>: Block size liquidity, tightest price. No fees</b>'
+            for chat_id in config.all_group_chat_ids:
+                await bot.send_message(
+                    chat_id=chat_id,
+                    text=text,
+                    parse_mode=ParseMode.HTML,
+                    disable_web_page_preview=True,
+                )
+        except Exception as e:
+            logger.error(f"Advertisement Push Error: {e}")
+            continue
+        await asyncio.sleep(1800)
 
 
 def get_block_trade_strategy(trades):
@@ -795,9 +812,9 @@ def generate_trade_message(data):
     else:
         text += f'<i>#onscreen</i>'
     # if timestamp in seconds of now % 3 is zero, add the text below
-    if int(time.time()) % 3 == 0:
-        text += '\n'
-        text += f'👉 Want Best Execution? <a href="https://pdgm.co/3ABtI6m">Paradigm</a> is 100% FREE and offers block liquidity in SIZE!'
+    # if int(time.time()) % 3 == 0:
+    #     text += '\n'
+    #     text += f'👉 Want Best Execution? <a href="https://pdgm.co/3ABtI6m">Paradigm</a> is 100% FREE and offers block liquidity in SIZE!'
     return text, strategy_name
 
 
@@ -841,6 +858,7 @@ def run_bot() -> None:
         loop.create_task(push_trade_to_telegram(config.signalplus_group_chat_ids[0]))
         loop.create_task(push_trade_to_telegram(config.playground_group_chat_id))
         loop.create_task(push_block_trade_to_telegram())
+        loop.create_task(push_advertisement_to_groups())
         loop.run_forever()
     except Exception as e:
         logger.error(e)
