@@ -539,7 +539,7 @@ async def push_block_trade_to_telegram():
 async def push_advertisement_to_groups():
     while True:
         try:
-            text = f'<b>🚀<a href="https://pdgm.co/3ABtI6m">Paradigm</a>: Block size liquidity, tightest price. No fees</b>'
+            text = f'<b>🚀 <a href="https://pdgm.co/3ABtI6m">Paradigm</a>: Block size liquidity, tightest price. No fees</b>'
             for chat_id in config.all_group_chat_ids:
                 await bot.send_message(
                     chat_id=chat_id,
