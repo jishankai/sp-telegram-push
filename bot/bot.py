@@ -21,7 +21,7 @@ DERIBIT_TICKER_API = "https://www.deribit.com/api/v2/public/ticker"
 BYBIT_TRADE_API = "https://api-testnet.bybit.com/v5/market/recent-trade"
 BYBIT_SYMBOL_API = "https://api-testnet.bybit.com/v5/market/instruments-info"
 OKX_TRADE_API = "https://www.okx.com/api/v5/public/option-trades"
-SIGNALPLUS_PUSH_TRADE_API = "https://mizar-gateway.signalplus.net/mizar/data/bus/save/trade"
+SIGNALPLUS_PUSH_TRADE_API = "https://mizar-gateway.signalplus.com/mizar/block_trades/save"
 
 redis_client = redis_client.RedisClient()
 bot = telegram.Bot(token=config.telegram_token)
