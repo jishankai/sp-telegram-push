@@ -5,7 +5,6 @@ import requests
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 import numpy as np
-from ing_theme_matplotlib import mpl_style
 from PIL import Image
 import io
 import sys
