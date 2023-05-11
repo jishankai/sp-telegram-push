@@ -4,3 +4,4 @@ python-dotenv==0.21.0
 requests==2.26.0
 redis
 pandas
+matplotlib
