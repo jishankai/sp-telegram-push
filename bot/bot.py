@@ -373,7 +373,7 @@ async def push_block_trade_to_telegram():
                         if trade["expiry"] not in expiries_seen:
                             expiries.append(trade["expiry"])
                             expiries_seen[trade["expiry"]] = True
-                        prices.append(f'{trade["price"]}({str(trade["iv"])+"v"})')
+                        prices.append(f'{trade["price"]} ({str(trade["iv"])+"v"})')
                         direction = trade["direction"].upper()
                         if direction == "BUY":
                             size = float(trade["size"])
