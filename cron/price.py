@@ -37,6 +37,8 @@ def get_prices():
     bot.send_message(chat_id=config_yaml["group_chat_id"], text=text, parse_mode=telegram.ParseMode.HTML)
     # Midas
     bot.send_message(chat_id=config_yaml["midas_group_chat_id"], text=text, parse_mode=telegram.ParseMode.HTML)
+    # Breavan
+    bot.send_message(chat_id=config_yaml["breavan_horward_group_chat_id"], text=text, parse_mode=telegram.ParseMode.HTML)
     # SignalPlus
     for chat_id in config_yaml["signalplus_group_chat_ids"]:
         bot.send_message(chat_id=chat_id, text=text, parse_mode=telegram.ParseMode.HTML)
