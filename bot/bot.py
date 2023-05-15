@@ -739,7 +739,7 @@ async def push_trade_to_telegram(group_chat_id):
                         parse_mode=ParseMode.HTML,
                         disable_web_page_preview=True,
                     )
-            elif group_chat_id == config.breavan_group_chat_id:
+            elif group_chat_id == config.breavan_horward_group_chat_id:
                 data = redis_client.get_item('breavan_trade_queue')
                 if data:
                     text, _ = generate_trade_message(data)
@@ -884,7 +884,7 @@ def run_bot() -> None:
         loop.create_task(fetch_bybit_data_all())
         loop.create_task(handle_trade_data())
         loop.create_task(push_trade_to_telegram(config.group_chat_id))
-        loop.create_task(push_trade_to_telegram(config.breavan_group_chat_id))
+        loop.create_task(push_trade_to_telegram(config.breavan_horward_group_chat_id))
         loop.create_task(push_trade_to_telegram(config.midas_group_chat_id))
         loop.create_task(push_trade_to_telegram(config.signalplus_group_chat_ids[0]))
         loop.create_task(push_trade_to_telegram(config.playground_group_chat_id))
