@@ -117,6 +117,12 @@ async def fetch_deribit_data(currency):
                     if not redis_client.is_block_trade_id_member(f"playground_{block_trade_id}"):
                         redis_client.put_block_trade_id(f"playground_{block_trade_id}")
                     redis_client.put_block_trade(trade, f"playground_{block_trade_id}")
+                # breavan horward only
+                if ((trade["currency"] == "BTC" and float(trade["size"]) >= 49) or (trade["currency"] == "ETH" and float(trade["size"]) >= 999)) and trade["iv"] is not None:
+                    if not redis_client.is_block_trade_id_member(f"breavan_{block_trade_id}"):
+                        redis_client.put_block_trade_id(f"breavan_{block_trade_id}")
+                    redis_client.put_block_trade(trade, f"breavan_{block_trade_id}")
+
 
             elif 'iv' in trade:
                 trade = {
@@ -311,6 +317,9 @@ async def handle_trade_data():
                 # Check if the size is >=25 or >=250
                 if data["currency"] == "BTC" and float(data["size"]) >= 25:
                     redis_client.put_item(data, 'bigsize_trade_queue')
+                    # breavan horward only
+                    if float(data["size"]) >= 49:
+                        redis_client.put_item(data, 'breavan_trade_queue')
                     # midas only
                     if float(data["size"]) >= 500:
                         redis_client.put_item(data, 'midas_trade_queue')
@@ -321,6 +330,9 @@ async def handle_trade_data():
                             redis_client.put_item(data, 'playground_trade_queue')
                 elif data["currency"] == "ETH" and float(data["size"]) >= 250:
                     redis_client.put_item(data, 'bigsize_trade_queue')
+                    # breavan horward only
+                    if float(data["size"]) >= 999:
+                        redis_client.put_item(data, 'breavan_trade_queue')
                     # midas only
                     if float(data["size"]) >= 1000:
                         redis_client.put_item(data, 'midas_trade_queue')
@@ -515,6 +527,13 @@ async def push_block_trade_to_telegram():
                 elif id.decode('utf-8').startswith("playground_"):
                     await bot.send_message(
                         chat_id=config.playground_group_chat_id,
+                        text=text,
+                        parse_mode=ParseMode.HTML,
+                        disable_web_page_preview=True,
+                    )
+                elif id.decode('utf-8').startswith("breavan_"):
+                    await bot.send_message(
+                        chat_id=config.breavan_horward_group_chat_id,
                         text=text,
                         parse_mode=ParseMode.HTML,
                         disable_web_page_preview=True,
@@ -720,6 +739,17 @@ async def push_trade_to_telegram(group_chat_id):
                         parse_mode=ParseMode.HTML,
                         disable_web_page_preview=True,
                     )
+            elif group_chat_id == config.breavan_group_chat_id:
+                data = redis_client.get_item('breavan_trade_queue')
+                if data:
+                    text, _ = generate_trade_message(data)
+                    # Send the data to Telegram group
+                    await bot.send_message(
+                        chat_id=group_chat_id,
+                        text=text,
+                        parse_mode=ParseMode.HTML,
+                        disable_web_page_preview=True,
+                    )
             elif group_chat_id == config.midas_group_chat_id:
                 data = redis_client.get_item('midas_trade_queue')
                 if data:
@@ -854,6 +884,7 @@ def run_bot() -> None:
         loop.create_task(fetch_bybit_data_all())
         loop.create_task(handle_trade_data())
         loop.create_task(push_trade_to_telegram(config.group_chat_id))
+        loop.create_task(push_trade_to_telegram(config.breavan_group_chat_id))
         loop.create_task(push_trade_to_telegram(config.midas_group_chat_id))
         loop.create_task(push_trade_to_telegram(config.signalplus_group_chat_ids[0]))
         loop.create_task(push_trade_to_telegram(config.playground_group_chat_id))
