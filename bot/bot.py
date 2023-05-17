@@ -2,6 +2,7 @@ import logging
 import requests
 import asyncio
 import time
+from datetime import datetime
 import os
 import pandas as pd
 
@@ -484,6 +485,10 @@ async def push_block_trade_to_telegram():
                         text += f' <b>Ref</b>: {"$"+str(data["index_price"])}'
                     else:
                         text += f'{trade_summary}'
+                        if short_strategy_name.find("Calendar") != -1:
+                            trades = sorted(trades, key=lambda x: datetime.strptime(x["expiry"], '%d%b%y'))
+                            expiries = [trade["expiry"] for trade in trades]
+                            prices = [f'{trade["price"]} ({str(trade["iv"])+"v"})' for trade in trades]
                         text += f'{"/".join(expiries)} '
                         text += f'{"/".join(strikes)} '
                         text += f'{short_strategy_name} '
