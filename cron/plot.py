@@ -93,11 +93,11 @@ def push_plot():
              ha='center', va='center', alpha=0.1)
     fig.figimage(img, xpos, ypos, alpha=.8, zorder=1)
 
-    plt.plot(x1, parsed_data[2]['y'], label='NOW', marker='o', color='y')
-    plt.plot(x1, parsed_data[1]['y'], label='T-1', marker='o', color='g')
-    plt.plot(x1, parsed_data[0]['y'], label='T-7', marker='o', color='c')
+    plt.plot(x1, parsed_data[2]['y'], label='NOW', marker='o', color='mediumpurple')
+    plt.plot(x1, parsed_data[1]['y'], label='T-1', marker='o', color='lightseagreen')
+    plt.plot(x1, parsed_data[0]['y'], label='T-7', marker='o', color='steelblue')
     if iv_type == 'atm':
-        plt.plot(x2, parsed_data[-1]['y'], '-.', label='RV', marker='o', color='pink')
+        plt.plot(x2, parsed_data[-1]['y'], '-.', label='RV', marker='o', color='goldenrod')
 
     plt.ylabel("IV/RV")
     min_y_axis = min_y - (max_y - min_y) / 4
@@ -109,7 +109,7 @@ def push_plot():
     plt.legend(loc='lower right', fontsize="8")
     title = f'{currency} {iv_type.upper()} Time Lapse IV - Tenor'
     plt.title(title)
-    plt.grid()
+    plt.grid(axis='y')
 
     buf = io.BytesIO()
     plt.savefig(buf, format='png', dpi=fig.dpi)
