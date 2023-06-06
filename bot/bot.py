@@ -635,7 +635,7 @@ def get_block_trade_strategy(trades):
             expiry = "N"
         elif trades[0]["expiry"] == trades[1]["expiry"]:
             expiry = "A=B"
-        elif trades[0]["expiry"] < trades[1]["expiry"]:
+        elif datetime.strptime(trades[0]["expiry"], '%d%b%y') < datetime.strptime(trades[1]["expiry"], '%d%b%y'):
             expiry = "A<B"
         else:
             expiry = "A>B"
@@ -681,13 +681,13 @@ def get_block_trade_strategy(trades):
             expiry = "N"
         elif trades[0]["expiry"] == trades[1]["expiry"] == trades[2]["expiry"]:
             expiry = "A=B=C"
-        elif trades[0]["expiry"] < trades[1]["expiry"] < trades[2]["expiry"]:
+        elif datetime.strptime(trades[0]["expiry"], '%d%b%y') < datetime.strptime(trades[1]["expiry"], '%d%b%y') < datetime.strptime(trades[2]["expiry"], '%d%b%y'):
             expiry = "A<B<C"
-        elif trades[0]["expiry"] == trades[1]["expiry"] < trades[2]["expiry"]:
+        elif datetime.strptime(trades[0]["expiry"], '%d%b%y') == datetime.strptime(trades[1]["expiry"], '%d%b%y') < datetime.strptime(trades[2]["expiry"], '%d%b%y'):
             expiry = "A=B<C"
-        elif trades[0]["expiry"] < trades[1]["expiry"] == trades[2]["expiry"]:
+        elif datetime.strptime(trades[0]["expiry"], '%d%b%y') < datetime.strptime(trades[1]["expiry"], '%d%b%y') == datetime.strptime(trades[2]["expiry"], '%d%b%y'):
             expiry = "A<B=C"
-        elif trades[0]["expiry"] < trades[1]["expiry"] > trades[2]["expiry"]:
+        elif datetime.strptime(trades[0]["expiry"], '%d%b%y') > datetime.strptime(trades[1]["expiry"], '%d%b%y') > datetime.strptime(trades[2]["expiry"], '%d%b%y'):
             expiry = "A>B>C"
 
         # size_ratio: "1:2:1" or None
