@@ -121,19 +121,16 @@ def push_volume():
              ha='center', va='center', alpha=0.1)
     fig.figimage(img, width-wm_width, 0, alpha=.8, zorder=1)
 
-
-    plt.show()
-
-    # buf = io.BytesIO()
-    # plt.savefig(buf, format='png', dpi=fig.dpi)
-    # buf.seek(0)
-    # text = f'📊 {title_text}'
-    # text += '\n\n'
-    # if currency == 'BTC':
-    #     text += '<b>🚀 <a href="https://pdgm.co/3ABtI6m">Paradigm</a>: Block size liquidity, tightest price. No fees</b>'
-    # else:
-    #     text += '<b>📈 <a href="https://t.signalplus.com/user/login?redirect=%2Fdashboard">SignalPlus</a>: Advanced options trading with zero fees</b>'
-    # asyncio.run(bot.send_photo(chat_id=config_yaml["group_chat_id"], photo=buf, caption=text, parse_mode=ParseMode.HTML))
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', dpi=fig.dpi)
+    buf.seek(0)
+    text = f'📊 {title_text}'
+    text += '\n\n'
+    if currency == 'BTC':
+        text += '<b>🚀 <a href="https://pdgm.co/3ABtI6m">Paradigm</a>: Block size liquidity, tightest price. No fees</b>'
+    else:
+        text += '<b>📈 <a href="https://t.signalplus.com/user/login?redirect=%2Fdashboard">SignalPlus</a>: Advanced options trading with zero fees</b>'
+    asyncio.run(bot.send_photo(chat_id=config_yaml["group_chat_id"], photo=buf, caption=text, parse_mode=ParseMode.HTML))
 
 
 if __name__ == "__main__":
