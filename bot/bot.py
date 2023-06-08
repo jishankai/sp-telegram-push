@@ -205,7 +205,7 @@ async def fetch_okx_data(currency):
         id = f"okx_{trade['tradeId']}_{trade['ts']}"
         if not redis_client.is_trade_member(id):
             """ Parse the trade data and return a dict (trade_id, source, symbol, currency, direction, price, size, iv, index_price, timestamp). The trade data is in the following format:
-            {"fillVol":"0.65430556640625","fwdPx":"1764.388687312925","indexPx":"1764.08","instFamily":"ETH-USD","instId":"ETH-USD-230331-1900-C","markPx":"0.005667868981589025","optType":"C","px":"0.0055","side":"sell","sz":"259","tradeId":"361","ts":"1679882651706"}
+            {"fillVol":"0.65430556640625","fwdPx":"1764.388687312925","idxPx":"1764.08","instFamily":"ETH-USD","instId":"ETH-USD-230331-1900-C","markPx":"0.005667868981589025","optType":"C","px":"0.0055","side":"sell","sz":"259","tradeId":"361","ts":"1679882651706"}
             """
             trade = {
                 "trade_id": trade["tradeId"],
@@ -216,7 +216,7 @@ async def fetch_okx_data(currency):
                 "price": trade["px"],
                 "size": int(trade["sz"])/100 if currency=="BTC" else int(trade["sz"])/10,
                 "iv": None,
-                "index_price": trade["indexPx"],
+                "index_price": trade["idxPx"],
                 "timestamp": trade["ts"],
             }
 
