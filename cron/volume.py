@@ -43,8 +43,7 @@ def push_volume():
     }
     response = requests.post(SIGNALPLUS_VOLUME_TRADE_API, headers=headers, json=req_body)
     json_data = response.json()
-    json_data['value'] = [item for item in json_data['value'] if item['symbol'] != f'{currency}-PERPETUAL']
-
+    json_data['value'] = [item for item in json_data['value'] if item['symbol'] != f'{currency}-PERPETUAL' and len(item['symbol'].split('-')) == 4]
     data = [['Rank', 'Instrument', 'Size']]
     for i, item in enumerate(json_data['value']):
         parts = item['symbol'].split('-')
