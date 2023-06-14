@@ -440,7 +440,7 @@ async def push_block_trade_to_telegram():
                             text += f'at {trade["price"]} {"₿" if currency=="BTC" else "Ξ"} (${float(trade["price"])*float(trade["index_price"]):,.2f}) '
                             text += f'{"Total Sold:" if direction=="SELL" else "Total Bought:"} '
                             total_trade = float(trade["price"]) * float(trade["size"])
-                            text += f'{total_trade:,4f} {"₿" if currency=="BTC" else "Ξ"} (${total_trade*float(trade["index_price"])/1000:,.2f}K),'
+                            text += f'{total_trade:,.4f} {"₿" if currency=="BTC" else "Ξ"} (${total_trade*float(trade["index_price"])/1000:,.2f}K),'
                             text += f' <b>IV</b>: {str(trade["iv"])+"%"},'
                             text += f' <b>Ref</b>: {"$"+str(trade["index_price"])}'
                             text += f' {"‼️‼️" if (trade["currency"] == "BTC" and float(trade["size"]) >= 1000) or (trade["currency"] == "ETH" and float(trade["size"]) >= 10000) else ""}'
@@ -494,7 +494,7 @@ async def push_block_trade_to_telegram():
                         text += f'at {data["price"]} {"U" if data["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"} (${data["price"] if data["source"].upper()=="BYBIT" else float(data["price"])*float(data["index_price"]):,.2f}) '
                         text += f'{"Total Sold:" if direction=="SELL" else "Total Bought:"} '
                         total_trade = float(trade["price"]) * float(trade["size"])
-                        text += f'{total_trade:,4f} {"₿" if currency=="BTC" else "Ξ"} (${total_trade*float(trade["index_price"])/1000:,.2f}K),'
+                        text += f'{total_trade:,.4f} {"₿" if currency=="BTC" else "Ξ"} (${total_trade*float(trade["index_price"])/1000:,.2f}K),'
                         text += f' <b>IV</b>: {str(trade["iv"])+"%"},'
                         text += f' <b>Ref</b>: {"$"+str(trade["index_price"])}'
                         text += f' {"‼️‼️" if (data["currency"] == "BTC" and float(data["size"]) >= 1000) or (data["currency"] == "ETH" and float(data["size"]) >= 10000) else ""}'
@@ -519,7 +519,7 @@ async def push_block_trade_to_telegram():
                                 text += f'at {trade["price"]} {"₿" if currency=="BTC" else "Ξ"} (${float(trade["price"])*float(trade["index_price"]):,.2f}) '
                                 text += f'{"Total Sold:" if direction=="SELL" else "Total Bought:"} '
                                 total_trade = float(trade["price"]) * float(trade["size"])
-                                text += f'{total_trade:,4f} {"₿" if currency=="BTC" else "Ξ"} (${total_trade*float(trade["index_price"])/1000:,.2f}K),'
+                                text += f'{total_trade:,.4f} {"₿" if currency=="BTC" else "Ξ"} (${total_trade*float(trade["index_price"])/1000:,.2f}K),'
                                 text += f' <b>IV</b>: {str(trade["iv"])+"%"},'
                                 text += f' <b>Ref</b>: {"$"+str(trade["index_price"])}'
                                 text += '\n'
@@ -875,7 +875,7 @@ def generate_trade_message(data):
     text += f'at {data["price"]} {"U" if data["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"} (${data["price"] if data["source"].upper()=="BYBIT" else float(data["price"])*float(data["index_price"]):,.2f}) '
     text += f'{"Total Sold:" if direction=="SELL" else "Total Bought:"} '
     total_trade = float(data["price"]) * float(data["size"])
-    text += f'{total_trade:,4f} {"₿" if currency=="BTC" else "Ξ"} (${total_trade*float(data["index_price"])/1000:,.2f}K),'
+    text += f'{total_trade:,.4f} {"₿" if currency=="BTC" else "Ξ"} (${total_trade*float(data["index_price"])/1000:,.2f}K),'
     text += f' <b>IV</b>: {str(data["iv"])+"%"},'
     text += f' <b>Ref</b>: {"$"+str(data["index_price"])}'
     text += f' {"‼️‼️" if (data["currency"] == "BTC" and float(data["size"]) >= 1000) or (data["currency"] == "ETH" and float(data["size"]) >= 10000) else ""}'
