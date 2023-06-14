@@ -44,8 +44,8 @@ async def get_prices():
     # FBG
     await bot.send_message(chat_id=config_yaml["fbg_group_chat_id"], text=text, parse_mode=ParseMode.HTML)
     # SignalPlus
-    for chat_id in config_yaml["signalplus_group_chat_ids"]:
-        await bot.send_message(chat_id=chat_id, text=text, parse_mode=ParseMode.HTML)
+    # for chat_id in config_yaml["signalplus_group_chat_ids"]:
+    #     await bot.send_message(chat_id=chat_id, text=text, parse_mode=ParseMode.HTML)
 
 if __name__ == "__main__":
     asyncio.run(get_prices())

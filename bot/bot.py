@@ -438,17 +438,18 @@ async def push_block_trade_to_telegram():
                             text += f'{"🔴 Sold" if direction=="SELL" else "🟢 Bought"} {trade["size"]}x '
                             text += f'{"🔶" if currency=="BTC" else "🔷"} {trade["symbol"]} {"📈" if callOrPut=="C" else "📉"} '
                             text += f'at {trade["price"]} {"₿" if currency=="BTC" else "Ξ"} (${float(trade["price"])*float(trade["index_price"]):,.2f}) '
-                            text += f' {"‼️‼️" if (trade["currency"] == "BTC" and float(trade["size"]) >= 1000) or (trade["currency"] == "ETH" and float(trade["size"]) >= 10000) else ""}'
-                            text += '\n'
-                            text += f'📊 <b>Vol</b>: {str(trade["iv"])+"%"},'
+                            text += f'{"Total Sold:" if direction=="SELL" else "Total Bought:"} '
+                            total_trade = premium * float(trade["size"])
+                            text += f'{total_trade:,.5f} {"₿" if currency=="BTC" else "Ξ"} (${total_trade*float(trade["index_price"])/1000:,.2f}K),'
+                            text += f' <b>IV</b>: {str(trade["iv"])+"%"},'
                             text += f' <b>Ref</b>: {"$"+str(trade["index_price"])}'
+                            text += f' {"‼️‼️" if (trade["currency"] == "BTC" and float(trade["size"]) >= 1000) or (trade["currency"] == "ETH" and float(trade["size"]) >= 10000) else ""}'
                         else:
                             text += '\n'
                             text += f'{"🔴 Sold " if direction=="SELL" else "🟢 Bought "} {trade["size"]}x '
                             text += f'{"🔶" if currency=="BTC" else "🔷"} {trade["symbol"]} '
-                            text += f'at ${float(trade["price"]):,.2f} '
-                            text += '\n\n'
-                            text += f'📊 <b>Ref</b>: {"$"+str(trade["index_price"])}'
+                            text += f'at ${float(trade["price"]):,.2f}, '
+                            text += f'<b>Ref</b>: {"$"+str(trade["index_price"])}'
 
                 else:
                     view = result["View"].values[0]
@@ -491,10 +492,12 @@ async def push_block_trade_to_telegram():
                         text += f'{"🔴 Sold" if direction=="SELL" else "🟢 Bought"} {data["size"]}x '
                         text += f'{"🔶" if currency=="BTC" else "🔷"} {data["symbol"]} {"📈" if callOrPut=="C" else "📉"} '
                         text += f'at {data["price"]} {"U" if data["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"} (${data["price"] if data["source"].upper()=="BYBIT" else float(data["price"])*float(data["index_price"]):,.2f}) '
+                        text += f'{"Total Sold:" if direction=="SELL" else "Total Bought:"} '
+                        total_trade = premium * float(trade["size"])
+                        text += f'{total_trade:,.5f} {"₿" if currency=="BTC" else "Ξ"} (${total_trade*float(trade["index_price"])/1000:,.2f}K),'
+                        text += f' <b>IV</b>: {str(trade["iv"])+"%"},'
+                        text += f' <b>Ref</b>: {"$"+str(trade["index_price"])}'
                         text += f' {"‼️‼️" if (data["currency"] == "BTC" and float(data["size"]) >= 1000) or (data["currency"] == "ETH" and float(data["size"]) >= 10000) else ""}'
-                        text += '\n\n'
-                        text += f'📊{" <b>Vol</b>: "+str(data["iv"])+"%,"}'
-                        text += f' <b>Ref</b>: {"$"+str(data["index_price"])}'
                     else:
                         text += f'{trade_summary}'
                         if short_strategy_name.find("Calendar") != -1:
@@ -507,8 +510,22 @@ async def push_block_trade_to_telegram():
                         text += f'at {premium:,.5f} {"₿" if currency=="BTC" else "Ξ"} (${premium*float(index_price):,.2f}) '
                         text += f' {"‼️‼️" if (trades[0]["currency"] == "BTC" and float(trades[0]["size"]) >= 1000) or (trades[0]["currency"] == "ETH" and float(trades[0]["size"]) >= 10000) else ""}'
                         text += '\n\n'
-                        text += f'📊 <b>Leg Prices</b>: {", ".join(prices)}'
-                        text += f' <b>Ref</b>: {"$"+str(index_price)}'
+                        for trade in trades:
+                            direction = trade["direction"].upper()
+                            callOrPut = trade["symbol"].split("-")[-1]
+                            if callOrPut == "C" or callOrPut == "P":
+                                text += '\n\n'
+                                text += f'{"🔴 Sold" if direction=="SELL" else "🟢 Bought"} {trade["size"]}x '
+                                text += f'{"🔶" if currency=="BTC" else "🔷"} {trade["symbol"]} {"📈" if callOrPut=="C" else "📉"} '
+                                text += f'at {trade["price"]} {"₿" if currency=="BTC" else "Ξ"} (${float(trade["price"])*float(trade["index_price"]):,.2f}) '
+                                text += f'{"Total Sold:" if direction=="SELL" else "Total Bought:"} '
+                                total_trade = premium * float(trade["size"])
+                                text += f'{total_trade:,.5f} {"₿" if currency=="BTC" else "Ξ"} (${total_trade*float(trade["index_price"])/1000:,.2f}K),'
+                                text += f' <b>IV</b>: {str(trade["iv"])+"%"},'
+                                text += f' <b>Ref</b>: {"$"+str(trade["index_price"])}'
+                                text += '\n'
+                        # text += f'📊 <b>Leg Prices</b>: {", ".join(prices)}'
+                        # text += f' <b>Ref</b>: {"$"+str(index_price)}'
 
                 if delta != 0 or gamma != 0 or vega != 0 or theta != 0 or rho != 0:
                     text += '\n'
@@ -857,10 +874,15 @@ def generate_trade_message(data):
     text += f'{"🔴 Sold" if direction=="SELL" else "🟢 Bought"} {data["size"]}x '
     text += f'{"🔶" if currency=="BTC" else "🔷"} {data["symbol"]} {"📈" if callOrPut=="C" else "📉"} '
     text += f'at {data["price"]} {"U" if data["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"} (${data["price"] if data["source"].upper()=="BYBIT" else float(data["price"])*float(data["index_price"]):,.2f}) '
+    text += f'{"Total Sold:" if direction=="SELL" else "Total Bought:"} '
+    total_trade = premium * float(trade["size"])
+    text += f'{total_trade:,.5f} {"₿" if currency=="BTC" else "Ξ"} (${total_trade*float(trade["index_price"])/1000:,.2f}K),'
+    text += f' <b>IV</b>: {str(trade["iv"])+"%"},'
+    text += f' <b>Ref</b>: {"$"+str(trade["index_price"])}'
     text += f' {"‼️‼️" if (data["currency"] == "BTC" and float(data["size"]) >= 1000) or (data["currency"] == "ETH" and float(data["size"]) >= 10000) else ""}'
-    text += '\n\n'
-    text += f'📊{" <b>Vol</b>: "+str(data["iv"])+"%," if data["iv"] else ""}'
-    text += f' <b>Ref</b>: {"$"+str(data["index_price"]) if data["index_price"] else "Unknown"}'
+    # text += '\n\n'
+    # text += f'📊{" <b>Vol</b>: "+str(data["iv"])+"%," if data["iv"] else ""}'
+    # text += f' <b>Ref</b>: {"$"+str(data["index_price"]) if data["index_price"] else "Unknown"}'
     if "greeks" in data:
         text += '\n'
         delta = float(data["greeks"]["delta"]) * size
