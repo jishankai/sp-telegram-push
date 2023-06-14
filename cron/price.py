@@ -43,6 +43,8 @@ async def get_prices():
     await bot.send_message(chat_id=config_yaml["breavan_horward_group_chat_id"], text=text, parse_mode=ParseMode.HTML)
     # FBG
     await bot.send_message(chat_id=config_yaml["fbg_group_chat_id"], text=text, parse_mode=ParseMode.HTML)
+    # typus
+    await bot.send_message(chat_id=config_yaml["typus_group_chat_id"], text=text, parse_mode=ParseMode.HTML)
     # SignalPlus
     # for chat_id in config_yaml["signalplus_group_chat_ids"]:
     #     await bot.send_message(chat_id=chat_id, text=text, parse_mode=ParseMode.HTML)
