@@ -429,12 +429,12 @@ async def push_block_trade_to_telegram():
                     else:
                         strategy_name = "FUTURES SPREAD"
                         text = f"<b>{currency} {strategy_name}:</b>"
+                    text += '\n\n'
 
                     for trade in trades:
                         direction = trade["direction"].upper()
                         callOrPut = trade["symbol"].split("-")[-1]
                         if callOrPut == "C" or callOrPut == "P":
-                            text += '\n\n'
                             text += f'{"🔴 Sold" if direction=="SELL" else "🟢 Bought"} {trade["size"]}x '
                             text += f'{"🔶" if currency=="BTC" else "🔷"} {trade["symbol"]} {"📈" if callOrPut=="C" else "📉"} '
                             text += f'at {trade["price"]} {"₿" if currency=="BTC" else "Ξ"} (${float(trade["price"])*float(trade["index_price"]):,.2f}) '
@@ -445,11 +445,12 @@ async def push_block_trade_to_telegram():
                             text += f' <b>Ref</b>: {"$"+str(trade["index_price"])}'
                             text += f' {"‼️‼️" if (trade["currency"] == "BTC" and float(trade["size"]) >= 1000) or (trade["currency"] == "ETH" and float(trade["size"]) >= 10000) else ""}'
                         else:
-                            text += '\n'
                             text += f'{"🔴 Sold " if direction=="SELL" else "🟢 Bought "} {trade["size"]}x '
                             text += f'{"🔶" if currency=="BTC" else "🔷"} {trade["symbol"]} '
                             text += f'at ${float(trade["price"]):,.2f}, '
                             text += f'<b>Ref</b>: {"$"+str(trade["index_price"])}'
+
+                        text += '\n'
 
                 else:
                     view = result["View"].values[0]
