@@ -45,6 +45,8 @@ def get_calendar():
 
     calendarResponse = requests.get(f'{calendarUrl}/{currentDate}/{tomorrowDate}', params={ "volatilities": "HIGH" }, headers=headers)
     calendar = calendarResponse.json()
+    if type(calendar) is dict:
+        return
     # calendar = [{'id': '6c272cfe-3881-4fb0-9ef8-e7362fb967fe', 'eventId': '28fc0440-6e9f-49b5-a847-d6d88fc6825c', 'dateUtc': '2023-07-28T01:30:00Z', 'periodDateUtc': '2023-04-01T00:00:00Z', 'periodType': 'QUARTER', 'actual': 0.5, 'revised': 0.7, 'consensus': 0.9, 'ratioDeviation': -0.48593, 'previous': 1.0, 'isBetterThanExpected': False, 'name': 'Producer Price Index (QoQ)', 'countryCode': 'AU', 'currencyCode': 'AUD', 'unit': '%', 'potency': 'ZERO', 'volatility': 'LOW', 'isAllDay': False, 'isTentative': False, 'isPreliminary': False, 'isReport': False, 'isSpeech': False, 'lastUpdated': 1690523985, 'previousIsPreliminary': None}, {'id': '9985c67e-4eb8-4df0-abdb-c48c1b0b3dc5', 'eventId': 'f6b00222-707d-4379-8965-b66ec535fac6', 'dateUtc': '2023-07-28T01:30:00Z', 'periodDateUtc': '2023-04-01T00:00:00Z', 'periodType': 'QUARTER', 'actual': 3.9, 'revised': 4.9, 'consensus': 3.9, 'ratioDeviation': 0.0, 'previous': 5.2, 'isBetterThanExpected': None, 'name': 'Producer Price Index (YoY)', 'countryCode': 'AU', 'currencyCode': 'AUD', 'unit': '%', 'potency': 'ZERO', 'volatility': 'MEDIUM', 'isAllDay': False, 'isTentative': False, 'isPreliminary': False, 'isReport': False, 'isSpeech': False, 'lastUpdated': 1690523946, 'previousIsPreliminary': None}]
     # filter dateUtc, name, countryCode, unit, potency, actual, consensus, previous from calendar
     calendarFlitered = []
