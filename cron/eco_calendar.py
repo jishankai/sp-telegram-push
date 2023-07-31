@@ -23,6 +23,22 @@ bot = telegram.Bot(token=config_yaml["telegram_token"])
 plt.rcParams['font.family'] = 'monospace'
 
 
+# 定义获取价格的函数
+def get_crypto_prices():
+    # 定义 CoinGecko API 的 URL
+    url = 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin%2Cethereum&vs_currencies=usd'
+
+    # 发送 GET 请求获取价格数据
+    response = requests.get(url)
+    # 解析响应数据
+    prices = response.json()
+    # 获取 BTC 和 ETH 的价格
+    btc_price = prices['bitcoin']['usd']
+    eth_price = prices['ethereum']['usd']
+
+    return btc_price, eth_price
+
+
 def get_calendar():
     oAuthUrl = "https://authorization.fxstreet.com/v2/token"
     oAuthData = {
@@ -65,14 +81,14 @@ def get_calendar():
     calendarFlitered.sort(key=lambda x: x["dateUtc"])
 
     # data = [["Time", "Event", "Area", "Actual", "Consensus", "Previous"]]
-    data = [["Time", "Event", "Area"]]
+    data = [["UTC+0", "Event", "Area", "Consensus"]]
     for event in calendarFlitered:
         # convert dateUtc to datetime
         dateUtc = datetime.datetime.strptime(event["dateUtc"], "%Y-%m-%dT%H:%M:%SZ")
         # convert datetime to local datetime
         # dateLocal = dateUtc + datetime.timedelta(hours=8)
         # convert datetime to string
-        dateLocalString = dateUtc.strftime("UTC+0 %H:%M")
+        dateLocalString = dateUtc.strftime("%H:%M")
         # covert countryCode to flag
         flag_emoji = flag.flag(event["countryCode"])
         # convert actual, consensus, previous to string
@@ -101,12 +117,16 @@ def get_calendar():
             else:
                 previousString = str(event["previous"])
         #data.append([dateLocalString, event["name"], f'{event["countryCode"]}', actualString, consensusString, previousString])
-        data.append([dateLocalString, event["name"], f'{event["countryCode"]}'])
+        data.append([dateLocalString, event["name"], f'{event["countryCode"]}', consensusString])
+
+    # get crypto prices
+    btc_price, eth_price = get_crypto_prices()
 
     # create new figure
     title_text = f'Economic Calendar {currentDate} - {tomorrowDate}'
     now = datetime.datetime.now()
-    footer_text = now.strftime("%Y-%m-%d %H:%M:%S")
+    footer_text = now.strftime('%Y-%m-%d %H:%M:%S')
+    footer_text += " " + r"$\bf{BTC}$" + f":\${btc_price} " + r"$\bf{ETH}$" + f":\${eth_price}"
     fig_background_color = 'snow'
     fig_border = 'darkgray'
     column_headers = data.pop(0)
@@ -125,7 +145,7 @@ def get_calendar():
                           #rowLabels=row_headers,
                           #rowColours=rcolors,
                           cellLoc='center',
-                          colWidths=[1/6, 17/24, 1/8],
+                          colWidths=[1/10, 7/10, 1/10, 1/10],
                           colColours=ccolors,
                           colLabels=column_headers,
                           loc='center')
@@ -146,7 +166,7 @@ def get_calendar():
     # Add title
     plt.suptitle(title_text, y=0.92, fontsize=16, weight='bold', color='black')
     # Add footer
-    plt.figtext(0.05, 0.05, footer_text, horizontalalignment='left', size=6, weight='light')
+    plt.figtext(0.02, 0.03, footer_text, horizontalalignment='left', size=13, weight='medium')
     # Force the figure to update, so backends center objects correctly within the figure.
     # Without plt.draw() here, the title will center on the axes and not the figure.
     plt.draw()

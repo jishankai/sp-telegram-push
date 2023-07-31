@@ -137,3 +137,4 @@ docker-compose.dev.yml
 mongodb
 redis
 *.ipynb
+.DS_Store
