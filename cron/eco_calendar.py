@@ -3,6 +3,7 @@
 import requests
 import asyncio
 import datetime
+import time
 import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
@@ -39,7 +40,7 @@ def get_crypto_prices():
     return btc_price, eth_price
 
 
-def get_calendar():
+async def get_calendar():
     oAuthUrl = "https://authorization.fxstreet.com/v2/token"
     oAuthData = {
         "grant_type": "client_credentials",
@@ -189,14 +190,20 @@ def get_calendar():
     buf = io.BytesIO()
     # plt.savefig('test.png', format='png', dpi=fig.dpi)
     plt.savefig(buf, format='png', dpi=fig.dpi)
-    buf.seek(0)
     text = f'📅 {title_text}'
     text += '\n\n'
     # text += '<b>📈 <a href="https://t.signalplus.com/user/login?redirect=%2Fdashboard">SignalPlus</a>: Advanced options trading with zero fees</b>'
 
     # all groups
     for group_chat_id in config_yaml["all_group_chat_ids"]:
-        asyncio.run(bot.send_photo(chat_id=group_chat_id, photo=buf, caption=text, parse_mode=ParseMode.HTML))
+        try:
+            buf.seek(0)
+            await bot.send_photo(chat_id=group_chat_id, photo=buf, caption=text, parse_mode=ParseMode.HTML)
+            print('sent', group_chat_id)
+        except Exception as e:
+            print(e)
+            print('unavailable', group_chat_id)
+
 
 def set_align_for_column(table, col, align="left"):
     cells = [key for key in table._cells if key[1] == col]
@@ -205,4 +212,4 @@ def set_align_for_column(table, col, align="left"):
         table._cells[cell]._text.set_horizontalalignment(align)
 
 if __name__ == "__main__":
-    get_calendar()
+    asyncio.run(get_calendar())
