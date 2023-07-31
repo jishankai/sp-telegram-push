@@ -193,7 +193,10 @@ def get_calendar():
     text = f'📅 {title_text}'
     text += '\n\n'
     # text += '<b>📈 <a href="https://t.signalplus.com/user/login?redirect=%2Fdashboard">SignalPlus</a>: Advanced options trading with zero fees</b>'
-    asyncio.run(bot.send_photo(chat_id=config_yaml["group_chat_id"], photo=buf, caption=text, parse_mode=ParseMode.HTML))
+
+    # all groups
+    for group_chat_id in config_yaml["all_groups_chat_id"]:
+        asyncio.run(bot.send_photo(chat_id=group_chat_id, photo=buf, caption=text, parse_mode=ParseMode.HTML))
 
 def set_align_for_column(table, col, align="left"):
     cells = [key for key in table._cells if key[1] == col]
