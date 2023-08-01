@@ -59,37 +59,58 @@ async def get_calendar():
     currentDate = datetime.datetime.utcnow().strftime("%Y-%m-%d")
     # tomorrow date utc string
     tomorrowDate = (datetime.datetime.utcnow() + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+    # after tomorrow date utc string
+    afterTomorrowDate = (datetime.datetime.utcnow() + datetime.timedelta(days=2)).strftime("%Y-%m-%d")
 
-    calendarResponse = requests.get(f'{calendarUrl}/{currentDate}/{tomorrowDate}', params={ "volatilities": "HIGH" }, headers=headers)
-    calendar = calendarResponse.json()
-    if type(calendar) is dict:
-        return
-    # calendar = [{'id': '6c272cfe-3881-4fb0-9ef8-e7362fb967fe', 'eventId': '28fc0440-6e9f-49b5-a847-d6d88fc6825c', 'dateUtc': '2023-07-28T01:30:00Z', 'periodDateUtc': '2023-04-01T00:00:00Z', 'periodType': 'QUARTER', 'actual': 0.5, 'revised': 0.7, 'consensus': 0.9, 'ratioDeviation': -0.48593, 'previous': 1.0, 'isBetterThanExpected': False, 'name': 'Producer Price Index (QoQ)', 'countryCode': 'AU', 'currencyCode': 'AUD', 'unit': '%', 'potency': 'ZERO', 'volatility': 'LOW', 'isAllDay': False, 'isTentative': False, 'isPreliminary': False, 'isReport': False, 'isSpeech': False, 'lastUpdated': 1690523985, 'previousIsPreliminary': None}, {'id': '9985c67e-4eb8-4df0-abdb-c48c1b0b3dc5', 'eventId': 'f6b00222-707d-4379-8965-b66ec535fac6', 'dateUtc': '2023-07-28T01:30:00Z', 'periodDateUtc': '2023-04-01T00:00:00Z', 'periodType': 'QUARTER', 'actual': 3.9, 'revised': 4.9, 'consensus': 3.9, 'ratioDeviation': 0.0, 'previous': 5.2, 'isBetterThanExpected': None, 'name': 'Producer Price Index (YoY)', 'countryCode': 'AU', 'currencyCode': 'AUD', 'unit': '%', 'potency': 'ZERO', 'volatility': 'MEDIUM', 'isAllDay': False, 'isTentative': False, 'isPreliminary': False, 'isReport': False, 'isSpeech': False, 'lastUpdated': 1690523946, 'previousIsPreliminary': None}]
-    # filter dateUtc, name, countryCode, unit, potency, actual, consensus, previous from calendar
+    todayCalendarResponse = requests.get(f'{calendarUrl}/{currentDate}/{tomorrowDate}', params={ "volatilities": "HIGH" }, headers=headers)
+    tomorrowCalendarResponse = requests.get(f'{calendarUrl}/{tomorrowDate}/{afterTomorrowDate}', params={ "volatilities": "HIGH" }, headers=headers)
+    todayCalendar = todayCalendarResponse.json()
+    tomorrowCalendar = tomorrowCalendarResponse.json()
     calendarFlitered = []
-    for event in calendar:
-        calendarFlitered.append({
-            "dateUtc": event["dateUtc"],
-            "name": event["name"],
-            "countryCode": event["countryCode"],
-            "unit": event["unit"],
-            "potency": event["potency"],
-            "actual": event["actual"],
-            "consensus": event["consensus"],
-            "previous": event["previous"]
-        })
-    # sort calendarFlitered by dateUtc ascending
-    calendarFlitered.sort(key=lambda x: x["dateUtc"])
+    if type(todayCalendar) is not dict:
+        # calendar = [{'id': '6c272cfe-3881-4fb0-9ef8-e7362fb967fe', 'eventId': '28fc0440-6e9f-49b5-a847-d6d88fc6825c', 'dateUtc': '2023-07-28T01:30:00Z', 'periodDateUtc': '2023-04-01T00:00:00Z', 'periodType': 'QUARTER', 'actual': 0.5, 'revised': 0.7, 'consensus': 0.9, 'ratioDeviation': -0.48593, 'previous': 1.0, 'isBetterThanExpected': False, 'name': 'Producer Price Index (QoQ)', 'countryCode': 'AU', 'currencyCode': 'AUD', 'unit': '%', 'potency': 'ZERO', 'volatility': 'LOW', 'isAllDay': False, 'isTentative': False, 'isPreliminary': False, 'isReport': False, 'isSpeech': False, 'lastUpdated': 1690523985, 'previousIsPreliminary': None}, {'id': '9985c67e-4eb8-4df0-abdb-c48c1b0b3dc5', 'eventId': 'f6b00222-707d-4379-8965-b66ec535fac6', 'dateUtc': '2023-07-28T01:30:00Z', 'periodDateUtc': '2023-04-01T00:00:00Z', 'periodType': 'QUARTER', 'actual': 3.9, 'revised': 4.9, 'consensus': 3.9, 'ratioDeviation': 0.0, 'previous': 5.2, 'isBetterThanExpected': None, 'name': 'Producer Price Index (YoY)', 'countryCode': 'AU', 'currencyCode': 'AUD', 'unit': '%', 'potency': 'ZERO', 'volatility': 'MEDIUM', 'isAllDay': False, 'isTentative': False, 'isPreliminary': False, 'isReport': False, 'isSpeech': False, 'lastUpdated': 1690523946, 'previousIsPreliminary': None}]
+        # filter dateUtc, name, countryCode, unit, potency, actual, consensus, previous from calendar
+        for event in todayCalendar:
+            dateUtc = datetime.datetime.strptime(event["dateUtc"], "%Y-%m-%dT%H:%M:%SZ")
+            dateHour = dateUtc.strftime("%H")
+            if dateHour < "06":
+                continue
+            calendarFlitered.append({
+                "dateUtc": dateUtc,
+                "name": event["name"],
+                "countryCode": event["countryCode"],
+                "unit": event["unit"],
+                "potency": event["potency"],
+                "actual": event["actual"],
+                "consensus": event["consensus"],
+                "previous": event["previous"]
+            })
+
+    if type(tomorrowCalendar) is not dict:
+        for event in todayCalendar:
+            dateUtc = datetime.datetime.strptime(event["dateUtc"], "%Y-%m-%dT%H:%M:%SZ")
+            dateHour = dateUtc.strftime("%H")
+            if dateHour >= "06":
+                continue
+            calendarFlitered.append({
+                "dateUtc": dateUtc,
+                "name": event["name"],
+                "countryCode": event["countryCode"],
+                "unit": event["unit"],
+                "potency": event["potency"],
+                "actual": event["actual"],
+                "consensus": event["consensus"],
+                "previous": event["previous"]
+            })
+
+    if len(calendarFlitered) == 0:
+        return
 
     # data = [["Time", "Event", "Area", "Actual", "Consensus", "Previous"]]
     data = [["UTC+0", "Event", "Area", "Consensus"]]
     for event in calendarFlitered:
-        # convert dateUtc to datetime
-        dateUtc = datetime.datetime.strptime(event["dateUtc"], "%Y-%m-%dT%H:%M:%SZ")
-        # convert datetime to local datetime
-        # dateLocal = dateUtc + datetime.timedelta(hours=8)
         # convert datetime to string
-        dateLocalString = dateUtc.strftime("%H:%M")
+        dateLocalString = event["dateUtc"].strftime("%H:%M")
         # covert countryCode to flag
         flag_emoji = flag.flag(event["countryCode"])
         # convert actual, consensus, previous to string
