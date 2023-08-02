@@ -56,8 +56,8 @@ def push_volume():
 
     # 创建新的图例
     title_text = f'{currency} {exchange_name.upper()} 24H BLOCK TRADE VOLUME TOP 10'
-    now = datetime.datetime.now()
-    footer_text = now.strftime("%Y-%m-%d %H:%M:%S")
+    now = datetime.datetime.utcnow()
+    footer_text = now.strftime('%Y-%m-%d %H:%M UTC+0')
     fig_background_color = 'snow'
     fig_border = 'darkgray'
     column_headers = data.pop(0)

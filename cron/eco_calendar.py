@@ -146,8 +146,8 @@ async def get_calendar():
 
     # create new figure
     title_text = f'Economic Calendar {currentDate} - {tomorrowDate}'
-    now = datetime.datetime.now()
-    footer_text = now.strftime('%Y-%m-%d %H:%M:%S')
+    now = datetime.datetime.utcnow()
+    footer_text = now.strftime('%Y-%m-%d %H:%M UTC+0')
     footer_text += " " + r"$\bf{BTC}$" + f":\${btc_price} " + r"$\bf{ETH}$" + f":\${eth_price}"
     fig_background_color = 'snow'
     fig_border = 'darkgray'

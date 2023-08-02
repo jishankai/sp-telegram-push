@@ -28,13 +28,13 @@ async def get_prices():
     btc_price = prices['bitcoin']['usd']
     eth_price = prices['ethereum']['usd']
 
-    now = datetime.datetime.now()
+    now = datetime.datetime.utcnow()
 
     # 输出价格信息
 
     text = "🏷️ Spot Prices\n\n"
     text += f'<i>🔶 BTC price: ${btc_price:.2f}</i>\n<i>🔷 ETH price: ${eth_price:.2f}</i>\n\n'
-    text += f'<i>⏰ {now.strftime("%Y-%m-%d %H:%M")} UTC</i>'
+    text += f'<i>⏰ {now.strftime("%Y-%m-%d %H:%M")} UTC+0</i>'
 
     await bot.send_message(chat_id=config_yaml["group_chat_id"], text=text, parse_mode=ParseMode.HTML)
     # Midas
