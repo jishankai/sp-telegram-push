@@ -579,6 +579,13 @@ async def push_block_trade_to_telegram():
                         parse_mode=ParseMode.HTML,
                         disable_web_page_preview=True,
                     )
+                    for chat_id in config.default_group_chat_ids:
+                        await bot.send_message(
+                            chat_id=chat_id,
+                            text=text,
+                            parse_mode=ParseMode.HTML,
+                            disable_web_page_preview=True,
+                        )
                 else:
                     # push trade to SignalPlus
                     await push_trade_to_signalplus(f"{currency} {strategy_name}", trades)
@@ -836,6 +843,14 @@ async def push_trade_to_telegram(group_chat_id):
                         parse_mode=ParseMode.HTML,
                         disable_web_page_preview=True,
                     )
+                    for chat_id in config.default_group_chat_ids:
+                        # Send the data to Telegram group
+                        await bot.send_message(
+                            chat_id=chat_id,
+                            text=text,
+                            parse_mode=ParseMode.HTML,
+                            disable_web_page_preview=True,
+                        )
         except Exception as e:
             logger.error(f"Error6: {e}")
             continue

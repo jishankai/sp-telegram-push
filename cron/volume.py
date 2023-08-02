@@ -130,6 +130,9 @@ def push_volume():
     else:
         text += '<b>📈 <a href="https://t.signalplus.com/user/login?redirect=%2Fdashboard">SignalPlus</a>: Advanced options trading with zero fees</b>'
     asyncio.run(bot.send_photo(chat_id=config_yaml["group_chat_id"], photo=buf, caption=text, parse_mode=ParseMode.HTML))
+    # Default
+    for chat_id in config_yaml["default_group_chat_ids"]:
+        asyncio.run(bot.send_photo(chat_id=chat_id, photo=buf, caption=text, parse_mode=ParseMode.HTML))
 
 
 if __name__ == "__main__":
