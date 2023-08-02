@@ -87,7 +87,7 @@ async def get_calendar():
             })
 
     if type(tomorrowCalendar) is not dict:
-        for event in todayCalendar:
+        for event in tomorrowCalendar:
             dateUtc = datetime.datetime.strptime(event["dateUtc"], "%Y-%m-%dT%H:%M:%SZ")
             dateHour = dateUtc.strftime("%H")
             if dateHour >= "06":
