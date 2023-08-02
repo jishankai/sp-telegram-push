@@ -24,7 +24,7 @@ SIGNALPLUS_VOLUME_TRADE_API = "https://mizar-gateway.signalplus.com/mizar/block_
 plt.rcParams['font.family'] = 'monospace'
 
 
-def push_volume():
+async def push_volume():
     args = sys.argv[1:]
     currency = args[0].upper()
     exchange_name = args[1].lower()
@@ -122,18 +122,18 @@ def push_volume():
 
     buf = io.BytesIO()
     plt.savefig(buf, format='png', dpi=fig.dpi)
-    buf.seek(0)
     text = f'📊 {title_text}'
     text += '\n\n'
     if currency == 'BTC':
         text += '<b>🚀 <a href="https://pdgm.co/3ABtI6m">Paradigm</a>: Block size liquidity, tightest price. No fees</b>'
     else:
         text += '<b>📈 <a href="https://t.signalplus.com/user/login?redirect=%2Fdashboard">SignalPlus</a>: Advanced options trading with zero fees</b>'
-    asyncio.run(bot.send_photo(chat_id=config_yaml["group_chat_id"], photo=buf, caption=text, parse_mode=ParseMode.HTML))
+    await bot.send_photo(chat_id=config_yaml["group_chat_id"], photo=buf, caption=text, parse_mode=ParseMode.HTML)
     # Default
     for chat_id in config_yaml["default_group_chat_ids"]:
-        asyncio.run(bot.send_photo(chat_id=chat_id, photo=buf, caption=text, parse_mode=ParseMode.HTML))
+        buf.seek(0)
+        await bot.send_photo(chat_id=chat_id, photo=buf, caption=text, parse_mode=ParseMode.HTML)
 
 
 if __name__ == "__main__":
-    push_volume()
+    asyncio.run(push_volume())
