@@ -132,8 +132,13 @@ async def push_volume():
     await bot.send_photo(chat_id=config_yaml["group_chat_id"], photo=buf, caption=text, parse_mode=ParseMode.HTML)
     # Default
     for chat_id in config_yaml["default_group_chat_ids"]:
-        buf.seek(0)
-        await bot.send_photo(chat_id=chat_id, photo=buf, caption=text, parse_mode=ParseMode.HTML)
+        try:
+            buf.seek(0)
+            await bot.send_photo(chat_id=chat_id, photo=buf, caption=text, parse_mode=ParseMode.HTML)
+            print('sent', chat_id)
+        except Exception as e:
+            print(e)
+            print('unavailable', chat_id)
 
 
 if __name__ == "__main__":

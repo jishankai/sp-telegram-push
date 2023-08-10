@@ -50,7 +50,12 @@ async def get_prices():
     #     await bot.send_message(chat_id=chat_id, text=text, parse_mode=ParseMode.HTML)
     # Default
     for chat_id in config_yaml["default_group_chat_ids"]:
-        await bot.send_message(chat_id=chat_id, text=text, parse_mode=ParseMode.HTML)
+        try:
+            await bot.send_message(chat_id=chat_id, text=text, parse_mode=ParseMode.HTML)
+            print('sent', chat_id)
+        except Exception as e:
+            print(e)
+            print('unavailable', chat_id)
 
 
 if __name__ == "__main__":
