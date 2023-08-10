@@ -594,7 +594,7 @@ async def push_block_trade_to_telegram():
                         parse_mode=ParseMode.HTML,
                         disable_web_page_preview=True,
                     )
-                    for chat_id in config.default_group_chat_ids:
+                    for chat_id in config.default_blocktrade_group_chat_ids:
                         await bot.send_message(
                             chat_id=chat_id,
                             text=text,
@@ -869,7 +869,7 @@ async def push_trade_to_telegram(group_chat_id):
                         parse_mode=ParseMode.HTML,
                         disable_web_page_preview=True,
                     )
-                    for chat_id in config.default_group_chat_ids:
+                    for chat_id in config.default_blocktrade_group_chat_ids:
                         # Send the data to Telegram group
                         await bot.send_message(
                             chat_id=chat_id,
