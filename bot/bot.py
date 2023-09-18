@@ -883,7 +883,7 @@ async def push_trade_to_telegram(group_chat_id):
                         parse_mode=ParseMode.HTML,
                         disable_web_page_preview=True,
                     )
-             elif group_chat_id == config.fbg_group_chat_id:
+            elif group_chat_id == config.fbg_group_chat_id:
                 data = redis_client.get_item('fbg_trade_queue')
                 if data:
                     text, _ = generate_trade_message(data)
