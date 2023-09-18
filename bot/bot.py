@@ -134,7 +134,11 @@ async def fetch_deribit_data(currency):
                     if not redis_client.is_block_trade_id_member(f"galaxy_{block_trade_id}"):
                         redis_client.put_block_trade_id(f"galaxy_{block_trade_id}")
                     redis_client.put_block_trade(trade, f"galaxy_{block_trade_id}")
-
+                # astron only
+                if ((trade["currency"] == "BTC" and float(trade["size"]) >= 500) or (trade["currency"] == "ETH" and float(trade["size"]) >= 5000)) and trade["iv"] is not None:
+                    if not redis_client.is_block_trade_id_member(f"astron_{block_trade_id}"):
+                        redis_client.put_block_trade_id(f"astron_{block_trade_id}")
+                    redis_client.put_block_trade(trade, f"astron_{block_trade_id}")
 
             elif 'iv' in trade:
                 trade = {
@@ -340,6 +344,7 @@ async def handle_trade_data():
                     # midas only
                     if float(data["size"]) >= 500:
                         redis_client.put_item(data, 'midas_trade_queue')
+                        redis_client.put_item(data, 'astron_trade_queue')
                         # playground
                         if float(data["size"]) >= 1000:
                             redis_client.put_item(data, 'playground_trade_queue')
@@ -359,6 +364,8 @@ async def handle_trade_data():
                         # signalplus
                         if float(data["size"]) >= 2000:
                             # redis_client.put_item(data, 'signalplus_trade_queue')
+                            if float(data["size"]) >= 5000:
+                                redis_client.put_item(data, 'astron_trade_queue')
                             # playground
                             if float(data["size"]) >= 10000:
                                 redis_client.put_item(data, 'playground_trade_queue')
@@ -583,6 +590,13 @@ async def push_block_trade_to_telegram():
                 elif id.decode('utf-8').startswith("galaxy_"):
                     await bot.send_message(
                         chat_id=config.galaxy_group_chat_id,
+                        text=text,
+                        parse_mode=ParseMode.HTML,
+                        disable_web_page_preview=True,
+                    )
+                elif id.decode('utf-8').startswith("astron_"):
+                    await bot.send_message(
+                        chat_id=config.astron_group_chat_id,
                         text=text,
                         parse_mode=ParseMode.HTML,
                         disable_web_page_preview=True,
@@ -858,7 +872,18 @@ async def push_trade_to_telegram(group_chat_id):
                         parse_mode=ParseMode.HTML,
                         disable_web_page_preview=True,
                     )
-            elif group_chat_id == config.fbg_group_chat_id:
+            elif group_chat_id == config.astron_group_chat_id:
+                data = redis_client.get_item('astron_trade_queue')
+                if data:
+                    text, _ = generate_trade_message(data)
+                    # Send the data to Telegram group
+                    await bot.send_message(
+                        chat_id=group_chat_id,
+                        text=text,
+                        parse_mode=ParseMode.HTML,
+                        disable_web_page_preview=True,
+                    )
+             elif group_chat_id == config.fbg_group_chat_id:
                 data = redis_client.get_item('fbg_trade_queue')
                 if data:
                     text, _ = generate_trade_message(data)
@@ -986,6 +1011,7 @@ def run_bot() -> None:
         loop.create_task(push_trade_to_telegram(config.midas_group_chat_id))
         loop.create_task(push_trade_to_telegram(config.fbg_group_chat_id))
         loop.create_task(push_trade_to_telegram(config.galaxy_group_chat_id))
+        loop.create_task(push_trade_to_telegram(config.astron_group_chat_id))
         loop.create_task(push_trade_to_telegram(config.signalplus_group_chat_ids[0]))
         loop.create_task(push_trade_to_telegram(config.playground_group_chat_id))
         loop.create_task(push_block_trade_to_telegram())
