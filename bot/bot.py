@@ -81,6 +81,11 @@ async def fetch_deribit_data(currency):
                         "size": trade["amount"],
                         "iv": trade["iv"],
                         "greeks": greeks,
+                        "bid": ticker["result"]["best_bid_price"],
+                        "bid_amount": ticker["result"]["best_bid_amount"],
+                        "ask": ticker["result"]["best_ask_price"],
+                        "ask_amount": ticker["result"]["best_ask_amount"],
+                        "mark": ticker["result"]["mark_price"],
                         "index_price": trade["index_price"],
                         "liquidation": True if "liquidation" in trade else False,
                         "timestamp": trade["timestamp"],
@@ -160,6 +165,11 @@ async def fetch_deribit_data(currency):
                         "instrument_name": trade["symbol"],
                     }).json()
                     trade["greeks"] = ticker["result"]["greeks"]
+                    trade["bid"] = ticker["result"]["best_bid_price"]
+                    trade["bid_amount"] = ticker["result"]["best_bid_amount"]
+                    trade["ask"] = ticker["result"]["best_ask_price"]
+                    trade["ask_amount"] = ticker["result"]["best_ask_amount"]
+                    trade["mark"] = ticker["result"]["mark_price"]
 
                 redis_client.put_trade(trade, id)
 
@@ -463,6 +473,9 @@ async def push_block_trade_to_telegram():
                             text += f' <b>IV</b>: {str(trade["iv"])+"%"},'
                             text += f' <b>Ref</b>: {"$"+str(trade["index_price"])}'
                             text += f' {"‼️‼️" if (trade["currency"] == "BTC" and float(trade["size"]) >= 1000) or (trade["currency"] == "ETH" and float(trade["size"]) >= 10000) else ""}'
+                            if "mark" in trade:
+                                text += '\n'
+                                text += f'bid: {trade["bid"]} (size: {trade["bid_amount"]}), mark: {trade["mark"]}, ask: {trade["ask"]} (size: {trade["ask_amount"]})'
                         else:
                             text += f'{"🔴 Sold " if direction=="SELL" else "🟢 Bought "} {trade["size"]}x '
                             text += f'{"🔶" if currency=="BTC" else "🔷"} {trade["symbol"]} '
@@ -513,11 +526,14 @@ async def push_block_trade_to_telegram():
                         text += f'{"🔶" if currency=="BTC" else "🔷"} {data["symbol"]} {"📈" if callOrPut=="C" else "📉"} '
                         text += f'at {data["price"]} {"U" if data["source"].upper()=="BYBIT" else "₿" if currency=="BTC" else "Ξ"} (${data["price"] if data["source"].upper()=="BYBIT" else float(data["price"])*float(data["index_price"]):,.2f}) '
                         text += f'{"Total Sold:" if direction=="SELL" else "Total Bought:"} '
-                        total_trade = float(trade["price"]) * float(trade["size"])
-                        text += f'{total_trade:,.4f} {"₿" if currency=="BTC" else "Ξ"} (${total_trade*float(trade["index_price"])/1000:,.2f}K),'
-                        text += f' <b>IV</b>: {str(trade["iv"])+"%"},'
-                        text += f' <b>Ref</b>: {"$"+str(trade["index_price"])}'
+                        total_trade = float(data["price"]) * float(data["size"])
+                        text += f'{total_trade:,.4f} {"₿" if currency=="BTC" else "Ξ"} (${total_trade*float(data["index_price"])/1000:,.2f}K),'
+                        text += f' <b>IV</b>: {str(data["iv"])+"%"},'
+                        text += f' <b>Ref</b>: {"$"+str(data["index_price"])}'
                         text += f' {"‼️‼️" if (data["currency"] == "BTC" and float(data["size"]) >= 1000) or (data["currency"] == "ETH" and float(data["size"]) >= 10000) else ""}'
+                        if "mark" in data:
+                            text += '\n'
+                            text += f'bid: {data["bid"]} (size: {data["bid_amount"]}), mark: {data["mark"]}, ask: {data["ask"]} (size: {data["ask_amount"]})'
                     else:
                         text += f'{trade_summary}'
                         if short_strategy_name.find("Calendar") != -1:
@@ -542,6 +558,9 @@ async def push_block_trade_to_telegram():
                                 text += f'{total_trade:,.4f} {"₿" if currency=="BTC" else "Ξ"} (${total_trade*float(trade["index_price"])/1000:,.2f}K),'
                                 text += f' <b>IV</b>: {str(trade["iv"])+"%"},'
                                 text += f' <b>Ref</b>: {"$"+str(trade["index_price"])}'
+                                if "mark" in trade:
+                                    text += '\n'
+                                    text += f'bid: {trade["bid"]} (size: {trade["bid_amount"]}), mark: {trade["mark"]}, ask: {trade["ask"]} (size: {trade["ask_amount"]})'
                                 text += '\n'
                         # text += f'📊 <b>Leg Prices</b>: {", ".join(prices)}'
                         # text += f' <b>Ref</b>: {"$"+str(index_price)}'
@@ -950,6 +969,10 @@ def generate_trade_message(data):
     text += f' <b>IV</b>: {str(data["iv"])+"%"},'
     text += f' <b>Ref</b>: {"$"+str(data["index_price"])}'
     text += f' {"‼️‼️" if (data["currency"] == "BTC" and float(data["size"]) >= 1000) or (data["currency"] == "ETH" and float(data["size"]) >= 10000) else ""}'
+    if "mark" in data:
+        text += '\n'
+        text += f'bid: {data["bid"]} (size: {data["bid_amount"]}), mark: {data["mark"]}, ask: {data["ask"]} (size: {data["ask_amount"]})'
+
     # text += '\n\n'
     # text += f'📊{" <b>Vol</b>: "+str(data["iv"])+"%," if data["iv"] else ""}'
     # text += f' <b>Ref</b>: {"$"+str(data["index_price"]) if data["index_price"] else "Unknown"}'
