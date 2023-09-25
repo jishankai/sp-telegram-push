@@ -40,6 +40,13 @@ class RedisClient:
     def get_array(self, key):
         return self.client.lrange(key, 0, -1)
 
+    # store data by using set method in redis
+    def set_data(self, data, key):
+        self.client.set(key, data)
+    # get data by using get method in redis
+    def get_data(self, key):
+        return self.client.get(key)
+
     # store timestamp named timeout in redis
     def set_bybit_symbols_timeout(self, timeout):
         self.client.set('bybit_symbols_timeout', timeout)

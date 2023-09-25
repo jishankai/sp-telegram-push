@@ -40,6 +40,8 @@ async def fetch_deribit_data(currency):
     })
     data = response.json()
     trades = data["result"]["trades"]
+    # sort trades in ascending order
+    trades.sort(key=lambda x: x["trade_seq"])
     for trade in trades:
         id = trade['trade_id']
         if not redis_client.is_trade_member(id):
@@ -71,6 +73,7 @@ async def fetch_deribit_data(currency):
                         "instrument_name": trade["instrument_name"],
                     }).json()
                     greeks = ticker["result"]["greeks"]
+                    oi_stored = redis_client.get_data(f'oi_{trade["instrument_name"]}')
                     trade = {
                         "trade_id": trade["trade_id"],
                         "source": "deribit",
@@ -86,10 +89,12 @@ async def fetch_deribit_data(currency):
                         "ask": ticker["result"]["best_ask_price"],
                         "ask_amount": ticker["result"]["best_ask_amount"],
                         "mark": ticker["result"]["mark_price"],
+                        "oi_change": float(ticker["result"]["open_interest"]) - float(oi_stored) if oi_stored is not None else 0,
                         "index_price": trade["index_price"],
                         "liquidation": True if "liquidation" in trade else False,
                         "timestamp": trade["timestamp"],
                     }
+                    redis_client.set_data(f'oi_{trade["instrument_name"]}', ticker["result"]["open_interest"])
                 else:
                     trade = {
                         "trade_id": trade["trade_id"],
@@ -164,13 +169,15 @@ async def fetch_deribit_data(currency):
                     ticker = requests.get(DERIBIT_TICKER_API, params={
                         "instrument_name": trade["symbol"],
                     }).json()
+                    oi_stored = redis_client.get_data(f'oi_{trade["instrument_name"]}')
                     trade["greeks"] = ticker["result"]["greeks"]
                     trade["bid"] = ticker["result"]["best_bid_price"]
                     trade["bid_amount"] = ticker["result"]["best_bid_amount"]
                     trade["ask"] = ticker["result"]["best_ask_price"]
                     trade["ask_amount"] = ticker["result"]["best_ask_amount"]
                     trade["mark"] = ticker["result"]["mark_price"]
-
+                    trade["oi_change"] = float(ticker["result"]["open_interest"]) - float(oi_stored) if oi_stored is not None else 0
+                    redis_client.set_data(f'oi_{trade["instrument_name"]}', ticker["result"]["open_interest"])
                 redis_client.put_trade(trade, id)
 
 async def fetch_bybit_data(symbol):
@@ -515,6 +522,12 @@ async def push_block_trade_to_telegram():
                         if size_ratio == "1:N" or size_ratio == "N:1":
                             text = f'<b>{strategy_name} ({trades[0]["size"]}x/{trades[1]["size"]}x):</b>'
                         else:
+                            if legs == 1 and trades[0]["oi_change"] != 0:
+                                if trades[0]["oi_change"] > 0:
+                                    strategy_name = f'✅OPENED {strategy_name}'
+                                else:
+                                    strategy_name = f'❌CLOSED {strategy_name}'
+
                             text = f'<b>{strategy_name} ({trades[0]["size"]}x):</b>'
                     text += '\n'
                     if legs == 1:
@@ -954,6 +967,11 @@ def generate_trade_message(data):
         elif callOrPut == "P":
             strategy_name = f"{currency} SHORT PUT"
             strategy = f"<b>SHORT {currency} PUT ({data['size']}x):</b>"
+
+    if data["oi_change"] > 0:
+        strategy = f'✅<b>OPENED</b> {strategy}'
+    elif data["oi_change"] < 0:
+        strategy = f'❌<b>CLOSED</b> {strategy}'
 
     text = strategy
     text += '\n\n'
