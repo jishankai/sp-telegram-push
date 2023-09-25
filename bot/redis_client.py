@@ -41,7 +41,7 @@ class RedisClient:
         return self.client.lrange(key, 0, -1)
 
     # store data by using set method in redis
-    def set_data(self, data, key):
+    def set_data(self, key, data):
         self.client.set(key, data)
     # get data by using get method in redis
     def get_data(self, key):
