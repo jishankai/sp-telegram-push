@@ -94,7 +94,7 @@ async def fetch_deribit_data(currency):
                         "liquidation": True if "liquidation" in trade else False,
                         "timestamp": trade["timestamp"],
                     }
-                    redis_client.set_data(f'oi_{trade["instrument_name"]}', ticker["result"]["open_interest"])
+                    redis_client.set_data(f'oi_{trade["symbol"]}', ticker["result"]["open_interest"])
                 else:
                     trade = {
                         "trade_id": trade["trade_id"],
@@ -169,7 +169,7 @@ async def fetch_deribit_data(currency):
                     ticker = requests.get(DERIBIT_TICKER_API, params={
                         "instrument_name": trade["symbol"],
                     }).json()
-                    oi_stored = redis_client.get_data(f'oi_{trade["instrument_name"]}')
+                    oi_stored = redis_client.get_data(f'oi_{trade["symbol"]}')
                     trade["greeks"] = ticker["result"]["greeks"]
                     trade["bid"] = ticker["result"]["best_bid_price"]
                     trade["bid_amount"] = ticker["result"]["best_bid_amount"]
@@ -177,7 +177,7 @@ async def fetch_deribit_data(currency):
                     trade["ask_amount"] = ticker["result"]["best_ask_amount"]
                     trade["mark"] = ticker["result"]["mark_price"]
                     trade["oi_change"] = float(ticker["result"]["open_interest"]) - float(oi_stored) if oi_stored is not None else 0
-                    redis_client.set_data(f'oi_{trade["instrument_name"]}', ticker["result"]["open_interest"])
+                    redis_client.set_data(f'oi_{trade["symbol"]}', ticker["result"]["open_interest"])
                 redis_client.put_trade(trade, id)
 
 async def fetch_bybit_data(symbol):
