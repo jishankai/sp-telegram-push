@@ -329,6 +329,10 @@ async def handle_trade_data():
             # Pop data from Redis
             data = redis_client.get_trade()
             if data:
+                # if data["price"] <= 0.0005 continue the loop
+                if float(data["price"]) <= 0.0005:
+                    continue
+
                 # logger.error(f"Pop data from Redis: {data}")
                 # Check if the size is >=25 or >=250
                 if data["currency"] == "BTC" and float(data["size"]) >= 25:
