@@ -524,6 +524,10 @@ async def push_block_trade_to_telegram():
                                 if trades[0]["oi_change"] > 0:
                                     strategy_name = f'✅OPENED {strategy_name}'
                                 else:
+                                    if strategy_name.startswith("LONG"):
+                                        strategy_name = strategy_name.replace("LONG", "SHORT")
+                                    elif strategy_name.startswith("SHORT"):
+                                        strategy_name = strategy_name.replace("SHORT", "LONG")
                                     strategy_name = f'❌CLOSED {strategy_name}'
 
                             text = f'<b>{strategy_name} ({trades[0]["size"]}x):</b>'
@@ -969,6 +973,10 @@ def generate_trade_message(data):
     if data["oi_change"] > 0:
         strategy = f'✅<b>OPENED</b> {strategy}'
     elif data["oi_change"] < 0:
+        if strategy.startswith("<b>LONG"):
+            strategy = strategy.replace("LONG", "SHORT")
+        elif strategy.startswith("<b>SHORT"):
+            strategy = strategy.replace("SHORT", "LONG")
         strategy = f'❌<b>CLOSED</b> {strategy}'
 
     text = strategy
