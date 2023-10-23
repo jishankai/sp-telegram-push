@@ -640,19 +640,27 @@ async def push_block_trade_to_telegram():
                         disable_web_page_preview=True,
                     )
                 elif id.decode('utf-8').startswith("fbg_"):
-                    await bot.send_message(
-                        chat_id=config.fbg_group_chat_id,
-                        text=text,
-                        parse_mode=ParseMode.HTML,
-                        disable_web_page_preview=True,
-                    )
-                    for chat_id in config.default_blocktrade_group_chat_ids:
+                    try:
                         await bot.send_message(
-                            chat_id=chat_id,
+                            chat_id=config.fbg_group_chat_id,
                             text=text,
                             parse_mode=ParseMode.HTML,
                             disable_web_page_preview=True,
                         )
+                    except Exception as e:
+                        print(e)
+                        print('unavailable', config.fbg_group_chat_id)
+                    for chat_id in config.default_blocktrade_group_chat_ids:
+                        try:
+                            await bot.send_message(
+                                chat_id=chat_id,
+                                text=text,
+                                parse_mode=ParseMode.HTML,
+                                disable_web_page_preview=True,
+                            )
+                        except Exception as e:
+                            print(e)
+                            print('unavailable', chat_id)
                 else:
                     # push trade to SignalPlus
                     await push_trade_to_signalplus(f"{currency} {strategy_name}", trades)
@@ -926,20 +934,28 @@ async def push_trade_to_telegram(group_chat_id):
                 if data:
                     text, _ = generate_trade_message(data)
                     # Send the data to Telegram group
-                    await bot.send_message(
-                        chat_id=group_chat_id,
-                        text=text,
-                        parse_mode=ParseMode.HTML,
-                        disable_web_page_preview=True,
-                    )
-                    for chat_id in config.default_blocktrade_group_chat_ids:
-                        # Send the data to Telegram group
+                    try:
                         await bot.send_message(
-                            chat_id=chat_id,
+                            chat_id=group_chat_id,
                             text=text,
                             parse_mode=ParseMode.HTML,
                             disable_web_page_preview=True,
                         )
+                    except Exception as e:
+                        print(e)
+                        print('unavailable', group_chat_id)
+                    for chat_id in config.default_blocktrade_group_chat_ids:
+                        # Send the data to Telegram group
+                        try:
+                            await bot.send_message(
+                                chat_id=chat_id,
+                                text=text,
+                                parse_mode=ParseMode.HTML,
+                                disable_web_page_preview=True,
+                            )
+                        except Exception as e:
+                            print(e)
+                            print('unavailable', chat_id)
         except Exception as e:
             logger.error(f"Error6: {e}")
             continue
