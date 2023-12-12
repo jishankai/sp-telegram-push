@@ -107,6 +107,7 @@ async def fetch_deribit_data(currency):
                         "price": trade["price"],
                         "size": trade["amount"],
                         "iv": None,
+                        "oi_change": 0,
                         "index_price": trade["index_price"],
                         "liquidation": True if "liquidation" in trade else False,
                         "timestamp": trade["timestamp"],
@@ -214,6 +215,7 @@ async def fetch_bybit_data(symbol):
                 "price": trade["price"],
                 "size": trade["size"],
                 "iv": None,
+                "oi_change": 0,
                 "index_price": None,
                 "timestamp": trade["time"],
             }
@@ -241,6 +243,7 @@ async def fetch_okx_data(currency):
                 "price": trade["px"],
                 "size": int(trade["sz"])/100 if currency=="BTC" else int(trade["sz"])/10,
                 "iv": None,
+                "oi_change": 0,
                 "index_price": trade["idxPx"],
                 "timestamp": trade["ts"],
             }
