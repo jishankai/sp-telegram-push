@@ -76,6 +76,7 @@ async def fetch_deribit_data(currency):
                     oi_stored = redis_client.get_data(f'oi_{trade["instrument_name"]}')
                     trade = {
                         "trade_id": trade["trade_id"],
+                        "block_trade_id": block_trade_id,
                         "source": "deribit",
                         "symbol": trade["instrument_name"],
                         "currency": currency,
@@ -98,6 +99,7 @@ async def fetch_deribit_data(currency):
                 else:
                     trade = {
                         "trade_id": trade["trade_id"],
+                        "block_trade_id": block_trade_id,
                         "source": "deribit",
                         "symbol": trade["instrument_name"],
                         "currency": currency,
@@ -853,7 +855,7 @@ async def push_trade_to_telegram(group_chat_id):
                 if data:
                     text, strategy_name = generate_trade_message(data)
                     # push trade to SignalPlus
-                    await push_trade_to_signalplus(strategy_name, [data])
+                    await push_trade_to_signalplus(f'{data["currency"]} {strategy_name}', [data])
 
                     # Send the data to Telegram group
                     await bot.send_message(
@@ -972,18 +974,18 @@ def generate_trade_message(data):
     if direction == "BUY":
         size = float(data["size"])
         if callOrPut == "C":
-            strategy_name = f"{currency} LONG CALL"
+            strategy_name = f"LONG {currency} CALL"
             strategy = f"<b>LONG {currency} CALL ({size}x):</b>"
         elif callOrPut == "P":
-            strategy_name = f"{currency} LONG PUT"
+            strategy_name = f"LONG {currency} PUT"
             strategy = f"<b>LONG {currency} PUT ({size}x):</b>"
     elif direction == "SELL":
         size = -float(data["size"])
         if callOrPut == "C":
-            strategy_name = f"{currency} SHORT CALL"
+            strategy_name = f"SHORT {currency} CALL"
             strategy = f"<b>SHORT {currency} CALL ({data['size']}x):</b>"
         elif callOrPut == "P":
-            strategy_name = f"{currency} SHORT PUT"
+            strategy_name = f"SHORT {currency} PUT"
             strategy = f"<b>SHORT {currency} PUT ({data['size']}x):</b>"
 
     if data["oi_change"] > 0:
