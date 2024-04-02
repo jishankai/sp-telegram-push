@@ -123,7 +123,7 @@ async def fetch_deribit_data(currency):
                     redis_client.put_block_trade(trade, f"midas_{block_trade_id}")
                 # signalplus only
                 #if ((trade["currency"] == "BTC" and float(trade["size"]) >= 500) or (trade["currency"] == "ETH" and float(trade["size"]) >= 2000)) and trade["iv"] is not None:
-                if ((trade["currency"] == "BTC" and float(trade["size"]) >= 1000) or (trade["currency"] == "ETH" and float(trade["size"]) >= 10000)) and trade["iv"] is not None:
+                if ((trade["currency"] == "BTC" and float(trade["size"]) >= 500) or (trade["currency"] == "ETH" and float(trade["size"]) >= 5000)) and trade["iv"] is not None:
                     if not redis_client.is_block_trade_id_member(f"signalplus_{block_trade_id}"):
                         redis_client.put_block_trade_id(f"signalplus_{block_trade_id}")
                     redis_client.put_block_trade(trade, f"signalplus_{block_trade_id}")
@@ -369,11 +369,11 @@ async def handle_trade_data():
                     if float(data["size"]) >= 500:
                         redis_client.put_item(data, 'midas_trade_queue')
                         redis_client.put_item(data, 'astron_trade_queue')
+                        # signalplus
+                        redis_client.put_item(data, 'signalplus_trade_queue')
                         # playground
                         if float(data["size"]) >= 1000:
                             redis_client.put_item(data, 'playground_trade_queue')
-                            # signalplus
-                            redis_client.put_item(data, 'signalplus_trade_queue')
                 elif data["currency"] == "ETH" and float(data["size"]) >= 250:
                     redis_client.put_item(data, 'bigsize_trade_queue')
                     # galaxy only
@@ -390,10 +390,10 @@ async def handle_trade_data():
                             # redis_client.put_item(data, 'signalplus_trade_queue')
                             if float(data["size"]) >= 5000:
                                 redis_client.put_item(data, 'astron_trade_queue')
+                                redis_client.put_item(data, 'signalplus_trade_queue')
                             # playground
                             if float(data["size"]) >= 10000:
                                 redis_client.put_item(data, 'playground_trade_queue')
-                                redis_client.put_item(data, 'signalplus_trade_queue')
         except Exception as e:
             logger.error(f"Error4: {e}")
             continue
