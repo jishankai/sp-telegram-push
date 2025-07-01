@@ -138,3 +138,5 @@ mongodb
 redis
 *.ipynb
 .DS_Store
+CLAUDE.md
+GEMINI.md

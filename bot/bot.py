@@ -116,42 +116,42 @@ async def fetch_deribit_data(currency):
                     redis_client.put_block_trade_id(block_trade_id)
                 redis_client.put_block_trade(trade, block_trade_id)
 
-                # midas only
-                if ((trade["currency"] == "BTC" and float(trade["size"]) >= 500) or (trade["currency"] == "ETH" and float(trade["size"]) >= 1000)) and trade["iv"] is not None:
-                    if not redis_client.is_block_trade_id_member(f"midas_{block_trade_id}"):
-                        redis_client.put_block_trade_id(f"midas_{block_trade_id}")
-                    redis_client.put_block_trade(trade, f"midas_{block_trade_id}")
-                # signalplus only
-                #if ((trade["currency"] == "BTC" and float(trade["size"]) >= 500) or (trade["currency"] == "ETH" and float(trade["size"]) >= 2000)) and trade["iv"] is not None:
-                if ((trade["currency"] == "BTC" and float(trade["size"]) >= 500) or (trade["currency"] == "ETH" and float(trade["size"]) >= 5000)) and trade["iv"] is not None:
-                    if not redis_client.is_block_trade_id_member(f"signalplus_{block_trade_id}"):
-                        redis_client.put_block_trade_id(f"signalplus_{block_trade_id}")
-                    redis_client.put_block_trade(trade, f"signalplus_{block_trade_id}")
-                # playground only
-                if ((trade["currency"] == "BTC" and float(trade["size"]) >= 1000) or (trade["currency"] == "ETH" and float(trade["size"]) >= 10000)) and trade["iv"] is not None:
-                    if not redis_client.is_block_trade_id_member(f"playground_{block_trade_id}"):
-                        redis_client.put_block_trade_id(f"playground_{block_trade_id}")
-                    redis_client.put_block_trade(trade, f"playground_{block_trade_id}")
-                # breavan horward only
-                if ((trade["currency"] == "BTC" and float(trade["size"]) >= 49) or (trade["currency"] == "ETH" and float(trade["size"]) >= 999)) and trade["iv"] is not None:
-                    if not redis_client.is_block_trade_id_member(f"breavan_{block_trade_id}"):
-                        redis_client.put_block_trade_id(f"breavan_{block_trade_id}")
-                    redis_client.put_block_trade(trade, f"breavan_{block_trade_id}")
-                # fbg only
-                if ((trade["currency"] == "BTC" and float(trade["size"]) >= 100) or (trade["currency"] == "ETH" and float(trade["size"]) >= 1000)) and trade["iv"] is not None:
-                    if not redis_client.is_block_trade_id_member(f"fbg_{block_trade_id}"):
-                        redis_client.put_block_trade_id(f"fbg_{block_trade_id}")
-                    redis_client.put_block_trade(trade, f"fbg_{block_trade_id}")
-                # galaxy only
-                if ((trade["currency"] == "BTC" and float(trade["size"]) >= 25) or (trade["currency"] == "ETH" and float(trade["size"]) >= 250)) and trade["iv"] is not None:
-                    if not redis_client.is_block_trade_id_member(f"galaxy_{block_trade_id}"):
-                        redis_client.put_block_trade_id(f"galaxy_{block_trade_id}")
-                    redis_client.put_block_trade(trade, f"galaxy_{block_trade_id}")
-                # astron only
-                if ((trade["currency"] == "BTC" and float(trade["size"]) >= 500) or (trade["currency"] == "ETH" and float(trade["size"]) >= 5000)) and trade["iv"] is not None:
-                    if not redis_client.is_block_trade_id_member(f"astron_{block_trade_id}"):
-                        redis_client.put_block_trade_id(f"astron_{block_trade_id}")
-                    redis_client.put_block_trade(trade, f"astron_{block_trade_id}")
+                # # midas only
+                # if ((trade["currency"] == "BTC" and float(trade["size"]) >= 500) or (trade["currency"] == "ETH" and float(trade["size"]) >= 1000)):
+                #     if not redis_client.is_block_trade_id_member(f"midas_{block_trade_id}"):
+                #         redis_client.put_block_trade_id(f"midas_{block_trade_id}")
+                #     redis_client.put_block_trade(trade, f"midas_{block_trade_id}")
+                # # signalplus only
+                # #if ((trade["currency"] == "BTC" and float(trade["size"]) >= 500) or (trade["currency"] == "ETH" and float(trade["size"]) >= 2000)) and trade["iv"] is not None:
+                # if ((trade["currency"] == "BTC" and float(trade["size"]) >= 500) or (trade["currency"] == "ETH" and float(trade["size"]) >= 5000)):
+                #     if not redis_client.is_block_trade_id_member(f"signalplus_{block_trade_id}"):
+                #         redis_client.put_block_trade_id(f"signalplus_{block_trade_id}")
+                #     redis_client.put_block_trade(trade, f"signalplus_{block_trade_id}")
+                # # playground only
+                # if ((trade["currency"] == "BTC" and float(trade["size"]) >= 1000) or (trade["currency"] == "ETH" and float(trade["size"]) >= 10000)):
+                #     if not redis_client.is_block_trade_id_member(f"playground_{block_trade_id}"):
+                #         redis_client.put_block_trade_id(f"playground_{block_trade_id}")
+                #     redis_client.put_block_trade(trade, f"playground_{block_trade_id}")
+                # # breavan horward only
+                # if ((trade["currency"] == "BTC" and float(trade["size"]) >= 49) or (trade["currency"] == "ETH" and float(trade["size"]) >= 999)):
+                #     if not redis_client.is_block_trade_id_member(f"breavan_{block_trade_id}"):
+                #         redis_client.put_block_trade_id(f"breavan_{block_trade_id}")
+                #     redis_client.put_block_trade(trade, f"breavan_{block_trade_id}")
+                # # fbg only
+                # if ((trade["currency"] == "BTC" and float(trade["size"]) >= 100) or (trade["currency"] == "ETH" and float(trade["size"]) >= 1000)):
+                #     if not redis_client.is_block_trade_id_member(f"fbg_{block_trade_id}"):
+                #         redis_client.put_block_trade_id(f"fbg_{block_trade_id}")
+                #     redis_client.put_block_trade(trade, f"fbg_{block_trade_id}")
+                # # galaxy only
+                # if ((trade["currency"] == "BTC" and float(trade["size"]) >= 25) or (trade["currency"] == "ETH" and float(trade["size"]) >= 250)):
+                #     if not redis_client.is_block_trade_id_member(f"galaxy_{block_trade_id}"):
+                #         redis_client.put_block_trade_id(f"galaxy_{block_trade_id}")
+                #     redis_client.put_block_trade(trade, f"galaxy_{block_trade_id}")
+                # # astron only
+                # if ((trade["currency"] == "BTC" and float(trade["size"]) >= 500) or (trade["currency"] == "ETH" and float(trade["size"]) >= 5000)):
+                #     if not redis_client.is_block_trade_id_member(f"astron_{block_trade_id}"):
+                #         redis_client.put_block_trade_id(f"astron_{block_trade_id}")
+                #     redis_client.put_block_trade(trade, f"astron_{block_trade_id}")
 
             elif 'iv' in trade:
                 trade = {
@@ -422,6 +422,8 @@ async def push_block_trade_to_telegram():
                 theta = 0
                 rho = 0
                 index_price = trades[0]["index_price"]
+                total_size = 0
+                currency = trades[0]["currency"]
 
                 # sort trades by distances between trade["strike"] and index_price if trade["iv"] is not None
                 trades = sorted(trades, key=lambda x: abs(float(x["symbol"].split("-")[-2]) - float(index_price)) if x["iv"] is not None else 0)
@@ -429,7 +431,7 @@ async def push_block_trade_to_telegram():
                 for trade in trades:
                     if trade["symbol"].split("-")[-1] == "C" or trade["symbol"].split("-")[-1] == "P":
                         trade["callOrPut"] = trade["symbol"].split("-")[-1]
-                        trade["strike"] = trade["symbol"].split("-")[-2]
+                        trade["strike"] = int(trade["symbol"].split("-")[-2])
                         trade["expiry"] = trade["symbol"].split("-")[-3]
                         if trade["strike"] not in strikes_seen:
                             strikes.append(trade["strike"])
@@ -444,6 +446,7 @@ async def push_block_trade_to_telegram():
                         else:
                             size = -float(trade["size"])
                         premium += float(trade["price"]) * size
+                        total_size += abs(size)
                         # if greeks
                         if "greeks" in trade:
                             delta += size * float(trade["greeks"]["delta"])
@@ -461,7 +464,6 @@ async def push_block_trade_to_telegram():
                 result, size_ratio, legs = get_block_trade_strategy(trades)
                 # 输出结果
                 if result.empty or result["Strategy Name"].values[0] == "FUTURES SPREAD":
-                    currency = trades[0]["currency"]
                     if result.empty:
                         strategy_name = "CUSTOM STRATEGY"
                         text = f"<b>CUSTOM {currency} STRATEGY:</b>"
@@ -498,7 +500,6 @@ async def push_block_trade_to_telegram():
                     view = result["View"].values[0]
                     strategy_name = result["Strategy Name"].values[0]
                     short_strategy_name = result["Short Strategy Name"].values[0].title()
-                    currency = trades[0]["currency"]
                     # strategy_name = 'LONG CALL SPREAD' or 'SHORT CALL SPREAD', make strategy_name to be 'LONG {currency} CALL SPREAD' or 'SHORT {currency} CALL SPREAD'
                     if strategy_name.startswith("LONG"):
                         strategy_name = strategy_name.replace("LONG", f"LONG {trades[0]['currency']}")
@@ -561,7 +562,7 @@ async def push_block_trade_to_telegram():
                             expiries = [trade["expiry"] for trade in trades]
                             prices = [f'{trade["price"]} ({str(trade["iv"])+"v"})' for trade in trades]
                         text += f'{"/".join(expiries)} '
-                        text += f'{"/".join(strikes)} '
+                        text += f'{"/".join(map(str, strikes))} '
                         text += f'{short_strategy_name} '
                         text += f'at {premium:,.5f} {"₿" if currency=="BTC" else "Ξ"} (${premium*float(index_price):,.2f}) '
                         text += f' {"‼️‼️" if (trades[0]["currency"] == "BTC" and float(trades[0]["size"]) >= 1000) or (trades[0]["currency"] == "ETH" and float(trades[0]["size"]) >= 10000) else ""}'
@@ -600,51 +601,67 @@ async def push_block_trade_to_telegram():
                 # if redis_client.is_paradigm_trade_timestamp_member(trades[0]["timestamp"]):
                 #     text += f'<i> 👉 Block trades on <a href="https://www.paradigm.co">paradigm</a></i>'
 
-                # If id is like "midas_", then send the data to midas telegram group
-                if id.decode('utf-8').startswith("midas_"):
+                # push trade to Telegram
+                try:
                     await bot.send_message(
-                        chat_id=config.midas_group_chat_id,
+                        chat_id=config.group_chat_id,
                         text=text,
                         parse_mode=ParseMode.HTML,
                         disable_web_page_preview=True,
                     )
-                elif id.decode('utf-8').startswith("signalplus_"):
-                    for chat_id in config.signalplus_group_chat_ids:
+                except Exception as e:
+                    logger.error(f"Failed to send message to main group {config.group_chat_id}: {e}")
+                
+                # push trade to SignalPlus (only once for all groups)
+                await push_trade_to_signalplus(f"{currency} {strategy_name}", trades)
+
+                # midas only
+                if ((currency == "BTC" and float(total_size) >= 500) or (currency == "ETH" and float(total_size) >= 1000)):
+                    try:
                         await bot.send_message(
-                            chat_id=chat_id,
+                            chat_id=config.midas_group_chat_id,
                             text=text,
                             parse_mode=ParseMode.HTML,
                             disable_web_page_preview=True,
                         )
-                elif id.decode('utf-8').startswith("playground_"):
-                    await bot.send_message(
-                        chat_id=config.playground_group_chat_id,
-                        text=text,
-                        parse_mode=ParseMode.HTML,
-                        disable_web_page_preview=True,
-                    )
-                elif id.decode('utf-8').startswith("breavan_"):
-                    await bot.send_message(
-                        chat_id=config.breavan_horward_group_chat_id,
-                        text=text,
-                        parse_mode=ParseMode.HTML,
-                        disable_web_page_preview=True,
-                    )
-                elif id.decode('utf-8').startswith("galaxy_"):
-                    await bot.send_message(
-                        chat_id=config.galaxy_group_chat_id,
-                        text=text,
-                        parse_mode=ParseMode.HTML,
-                        disable_web_page_preview=True,
-                    )
-                elif id.decode('utf-8').startswith("astron_"):
-                    await bot.send_message(
-                        chat_id=config.astron_group_chat_id,
-                        text=text,
-                        parse_mode=ParseMode.HTML,
-                        disable_web_page_preview=True,
-                    )
-                elif id.decode('utf-8').startswith("fbg_"):
+                    except Exception as e:
+                        logger.error(f"Failed to send message to midas group {config.midas_group_chat_id}: {e}")
+                # signalplus only
+                if ((currency == "BTC" and float(total_size) >= 500) or (currency == "ETH" and float(total_size) >= 5000)):
+                    for chat_id in config.signalplus_group_chat_ids:
+                        try:
+                            await bot.send_message(
+                                chat_id=chat_id,
+                                text=text,
+                                parse_mode=ParseMode.HTML,
+                                disable_web_page_preview=True,
+                            )
+                        except Exception as e:
+                            logger.error(f"Failed to send message to signalplus group {chat_id}: {e}")
+                # playground only
+                if ((currency == "BTC" and float(total_size) >= 1000) or (currency == "ETH" and float(total_size) >= 10000)):
+                    try:
+                        await bot.send_message(
+                            chat_id=config.playground_group_chat_id,
+                            text=text,
+                            parse_mode=ParseMode.HTML,
+                            disable_web_page_preview=True,
+                        )
+                    except Exception as e:
+                        logger.error(f"Failed to send message to playground group {config.playground_group_chat_id}: {e}")
+                # breavan horward only
+                if ((currency == "BTC" and float(total_size) >= 49) or (currency == "ETH" and float(total_size) >= 999)):
+                    try:
+                        await bot.send_message(
+                            chat_id=config.breavan_horward_group_chat_id,
+                            text=text,
+                            parse_mode=ParseMode.HTML,
+                            disable_web_page_preview=True,
+                        )
+                    except Exception as e:
+                        logger.error(f"Failed to send message to breavan group {config.breavan_horward_group_chat_id}: {e}")
+                # fbg only
+                if ((currency == "BTC" and float(total_size) >= 100) or (currency == "ETH" and float(total_size) >= 1000)):
                     try:
                         await bot.send_message(
                             chat_id=config.fbg_group_chat_id,
@@ -653,8 +670,7 @@ async def push_block_trade_to_telegram():
                             disable_web_page_preview=True,
                         )
                     except Exception as e:
-                        print(e)
-                        print('unavailable', config.fbg_group_chat_id)
+                        logger.error(f"Failed to send message to fbg group {config.fbg_group_chat_id}: {e}")
                     for chat_id in config.default_blocktrade_group_chat_ids:
                         try:
                             await bot.send_message(
@@ -664,18 +680,107 @@ async def push_block_trade_to_telegram():
                                 disable_web_page_preview=True,
                             )
                         except Exception as e:
-                            print(e)
-                            print('unavailable', chat_id)
-                else:
-                    # push trade to SignalPlus
-                    await push_trade_to_signalplus(f"{currency} {strategy_name}", trades)
-                    # push trade to Telegram
-                    await bot.send_message(
-                        chat_id=config.group_chat_id,
-                        text=text,
-                        parse_mode=ParseMode.HTML,
-                        disable_web_page_preview=True,
-                    )
+                            logger.error(f"Failed to send message to default blocktrade group {chat_id}: {e}")
+                # galaxy only
+                if ((currency == "BTC" and float(total_size) >= 25) or (currency == "ETH" and float(total_size) >= 250)):
+                    try:
+                        await bot.send_message(
+                            chat_id=config.galaxy_group_chat_id,
+                            text=text,
+                            parse_mode=ParseMode.HTML,
+                            disable_web_page_preview=True,
+                        )
+                    except Exception as e:
+                        logger.error(f"Failed to send message to galaxy group {config.galaxy_group_chat_id}: {e}")
+                # astron only
+                if ((currency == "BTC" and float(total_size) >= 500) or (currency == "ETH" and float(total_size) >= 5000)):
+                    try:
+                        await bot.send_message(
+                            chat_id=config.astron_group_chat_id,
+                            text=text,
+                            parse_mode=ParseMode.HTML,
+                            disable_web_page_preview=True,
+                        )
+                    except Exception as e:
+                        logger.error(f"Failed to send message to astron group {config.astron_group_chat_id}: {e}")
+
+
+                # # If id is like "midas_", then send the data to midas telegram group
+                # if id.decode('utf-8').startswith("midas_"):
+                #     await bot.send_message(
+                #         chat_id=config.midas_group_chat_id,
+                #         text=text,
+                #         parse_mode=ParseMode.HTML,
+                #         disable_web_page_preview=True,
+                #     )
+                # elif id.decode('utf-8').startswith("signalplus_"):
+                #     for chat_id in config.signalplus_group_chat_ids:
+                #         await bot.send_message(
+                #             chat_id=chat_id,
+                #             text=text,
+                #             parse_mode=ParseMode.HTML,
+                #             disable_web_page_preview=True,
+                #         )
+                # elif id.decode('utf-8').startswith("playground_"):
+                #     await bot.send_message(
+                #         chat_id=config.playground_group_chat_id,
+                #         text=text,
+                #         parse_mode=ParseMode.HTML,
+                #         disable_web_page_preview=True,
+                #     )
+                # elif id.decode('utf-8').startswith("breavan_"):
+                #     await bot.send_message(
+                #         chat_id=config.breavan_horward_group_chat_id,
+                #         text=text,
+                #         parse_mode=ParseMode.HTML,
+                #         disable_web_page_preview=True,
+                #     )
+                # elif id.decode('utf-8').startswith("galaxy_"):
+                #     await bot.send_message(
+                #         chat_id=config.galaxy_group_chat_id,
+                #         text=text,
+                #         parse_mode=ParseMode.HTML,
+                #         disable_web_page_preview=True,
+                #     )
+                # elif id.decode('utf-8').startswith("astron_"):
+                #     await bot.send_message(
+                #         chat_id=config.astron_group_chat_id,
+                #         text=text,
+                #         parse_mode=ParseMode.HTML,
+                #         disable_web_page_preview=True,
+                #     )
+                # elif id.decode('utf-8').startswith("fbg_"):
+                #     try:
+                #         await bot.send_message(
+                #             chat_id=config.fbg_group_chat_id,
+                #             text=text,
+                #             parse_mode=ParseMode.HTML,
+                #             disable_web_page_preview=True,
+                #         )
+                #     except Exception as e:
+                #         print(e)
+                #         print('unavailable', config.fbg_group_chat_id)
+                #     for chat_id in config.default_blocktrade_group_chat_ids:
+                #         try:
+                #             await bot.send_message(
+                #                 chat_id=chat_id,
+                #                 text=text,
+                #                 parse_mode=ParseMode.HTML,
+                #                 disable_web_page_preview=True,
+                #             )
+                #         except Exception as e:
+                #             print(e)
+                #             print('unavailable', chat_id)
+                # else:
+                #     # push trade to SignalPlus
+                #     await push_trade_to_signalplus(f"{currency} {strategy_name}", trades)
+                #     # push trade to Telegram
+                #     await bot.send_message(
+                #         chat_id=config.group_chat_id,
+                #         text=text,
+                #         parse_mode=ParseMode.HTML,
+                #         disable_web_page_preview=True,
+                #     )
         except Exception as e:
             logger.error(f"Error5: {e}")
             continue
@@ -947,8 +1052,7 @@ async def push_trade_to_telegram(group_chat_id):
                             disable_web_page_preview=True,
                         )
                     except Exception as e:
-                        print(e)
-                        print('unavailable', group_chat_id)
+                        logger.error(f"Failed to send message to fbg group {group_chat_id}: {e}")
                     for chat_id in config.default_blocktrade_group_chat_ids:
                         # Send the data to Telegram group
                         try:
@@ -959,8 +1063,7 @@ async def push_trade_to_telegram(group_chat_id):
                                 disable_web_page_preview=True,
                             )
                         except Exception as e:
-                            print(e)
-                            print('unavailable', chat_id)
+                            logger.error(f"Failed to send message to default group {chat_id}: {e}")
         except Exception as e:
             logger.error(f"Error6: {e}")
             continue
