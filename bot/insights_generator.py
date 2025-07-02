@@ -50,7 +50,7 @@ Focus on:
 Keep it concise, professional, and actionable."""
 
             response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
+                model="gpt-4.1-nano",
                 messages=[
                     {"role": "system", "content": "You are an expert options trader providing concise market insights."},
                     {"role": "user", "content": prompt}
