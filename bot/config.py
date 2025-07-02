@@ -26,3 +26,4 @@ galaxy_group_chat_id = config_yaml["galaxy_group_chat_id"]
 astron_group_chat_id = config_yaml["astron_group_chat_id"]
 default_group_chat_ids = config_yaml["default_group_chat_ids"]
 default_blocktrade_group_chat_ids = config_yaml["default_blocktrade_group_chat_ids"]
+openai_api_key = config_yaml.get("openai_api_key", "")

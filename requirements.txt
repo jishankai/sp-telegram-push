@@ -5,3 +5,4 @@ requests==2.26.0
 redis
 pandas
 matplotlib
+openai

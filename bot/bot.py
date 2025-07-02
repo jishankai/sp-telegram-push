@@ -12,6 +12,7 @@ from telegram.constants import ParseMode
 import config
 import redis_client
 import paradigm
+from insights_generator import insights_generator
 
 # logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -589,6 +590,18 @@ async def push_block_trade_to_telegram():
                 if delta != 0 or gamma != 0 or vega != 0 or theta != 0 or rho != 0:
                     text += '\n'
                     text += f'📖 <b>Risks</b>: <i>Δ: {delta:,.2f}, Γ: {gamma:,.4f}, ν: {vega:,.2f}, Θ: {theta:,.2f}, ρ: {rho:,.2f}</i>'
+                # Generate AI insights for significant trades
+                if ((currency == "BTC" and float(total_size) >= 100) or (currency == "ETH" and float(total_size) >= 1000)):
+                    try:
+                        insights = await insights_generator.generate_trade_insights(
+                            strategy_name, trades, currency, total_size, premium, float(index_price)
+                        )
+                        if insights:
+                            text += '\n'
+                            text += f'🧠 <b>AI Insights</b>: <i>{insights}</i>'
+                    except Exception as e:
+                        logger.error(f"Failed to generate insights: {e}")
+                
                 text += '\n\n'
                 text += f'<i>Deribit</i>'
                 text += '\n'
@@ -994,7 +1007,7 @@ async def push_trade_to_telegram(group_chat_id):
             if group_chat_id == config.group_chat_id:
                 data = redis_client.get_item('bigsize_trade_queue')
                 if data:
-                    text, strategy_name = generate_trade_message(data)
+                    text, strategy_name = await generate_trade_message_with_insights(data)
                     # push trade to SignalPlus
                     await push_trade_to_signalplus(f'{data["currency"]} {strategy_name}', [data])
 
@@ -1008,7 +1021,7 @@ async def push_trade_to_telegram(group_chat_id):
             elif group_chat_id == config.breavan_horward_group_chat_id:
                 data = redis_client.get_item('breavan_trade_queue')
                 if data:
-                    text, _ = generate_trade_message(data)
+                    text, _ = await generate_trade_message_with_insights(data)
                     # Send the data to Telegram group
                     await bot.send_message(
                         chat_id=group_chat_id,
@@ -1019,7 +1032,7 @@ async def push_trade_to_telegram(group_chat_id):
             elif group_chat_id == config.midas_group_chat_id:
                 data = redis_client.get_item('midas_trade_queue')
                 if data:
-                    text, _ = generate_trade_message(data)
+                    text, _ = await generate_trade_message_with_insights(data)
                     # Send the data to Telegram group
                     await bot.send_message(
                         chat_id=group_chat_id,
@@ -1030,7 +1043,7 @@ async def push_trade_to_telegram(group_chat_id):
             elif group_chat_id in config.signalplus_group_chat_ids:
                 data = redis_client.get_item('signalplus_trade_queue')
                 if data:
-                    text, _ = generate_trade_message(data)
+                    text, _ = await generate_trade_message_with_insights(data)
                     for chat_id in config.signalplus_group_chat_ids:
                         # Send the data to Telegram group
                         await bot.send_message(
@@ -1042,7 +1055,7 @@ async def push_trade_to_telegram(group_chat_id):
             elif group_chat_id == config.playground_group_chat_id:
                 data = redis_client.get_item('playground_trade_queue')
                 if data:
-                    text, _ = generate_trade_message(data)
+                    text, _ = await generate_trade_message_with_insights(data)
                     # Send the data to Telegram group
                     await bot.send_message(
                         chat_id=group_chat_id,
@@ -1053,7 +1066,7 @@ async def push_trade_to_telegram(group_chat_id):
             elif group_chat_id == config.galaxy_group_chat_id:
                 data = redis_client.get_item('galaxy_trade_queue')
                 if data:
-                    text, _ = generate_trade_message(data)
+                    text, _ = await generate_trade_message_with_insights(data)
                     # Send the data to Telegram group
                     await bot.send_message(
                         chat_id=group_chat_id,
@@ -1064,7 +1077,7 @@ async def push_trade_to_telegram(group_chat_id):
             elif group_chat_id == config.astron_group_chat_id:
                 data = redis_client.get_item('astron_trade_queue')
                 if data:
-                    text, _ = generate_trade_message(data)
+                    text, _ = await generate_trade_message_with_insights(data)
                     # Send the data to Telegram group
                     await bot.send_message(
                         chat_id=group_chat_id,
@@ -1075,7 +1088,7 @@ async def push_trade_to_telegram(group_chat_id):
             elif group_chat_id == config.fbg_group_chat_id:
                 data = redis_client.get_item('fbg_trade_queue')
                 if data:
-                    text, _ = generate_trade_message(data)
+                    text, _ = await generate_trade_message_with_insights(data)
                     # Send the data to Telegram group
                     try:
                         await bot.send_message(
@@ -1176,6 +1189,33 @@ def generate_trade_message(data):
     # if int(time.time()) % 3 == 0:
     #     text += '\n'
     #     text += f'👉 Want Best Execution? <a href="https://pdgm.co/3ABtI6m">Paradigm</a> is 100% FREE and offers block liquidity in SIZE!'
+    return text, strategy_name
+
+async def generate_trade_message_with_insights(data):
+    """Generate trade message with AI insights for significant trades"""
+    text, strategy_name = generate_trade_message(data)
+    
+    # Add insights for significant trades
+    currency = data["currency"]
+    size = float(data["size"])
+    if ((currency == "BTC" and size >= 100) or (currency == "ETH" and size >= 1000)):
+        try:
+            premium = float(data["price"]) * size
+            index_price = float(data["index_price"]) if data.get("index_price") else 0
+            
+            insights = await insights_generator.generate_trade_insights(
+                strategy_name, [data], currency, size, premium, index_price
+            )
+            if insights:
+                # Insert insights before the source/tag section
+                parts = text.rsplit('\n\n', 1)
+                if len(parts) == 2:
+                    text = parts[0] + f'\n🧠 <b>AI Insights</b>: <i>{insights}</i>\n\n' + parts[1]
+                else:
+                    text += f'\n🧠 <b>AI Insights</b>: <i>{insights}</i>'
+        except Exception as e:
+            logger.error(f"Failed to generate insights for single trade: {e}")
+    
     return text, strategy_name
 
 
