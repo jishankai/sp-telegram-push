@@ -941,6 +941,39 @@ def get_block_trade_strategy(trades):
         sideC = "+C" if trades[2]["direction"].upper() == "BUY" else "-C"
         sideD = "+D" if trades[3]["direction"].upper() == "BUY" else "-D"
         side = sideA + sideB + sideC + sideD
+    elif legs == 5:
+        # contract_type: "C", "P" for 5-leg strategies
+        if trades[0]["callOrPut"] == trades[1]["callOrPut"] == trades[2]["callOrPut"] == trades[3]["callOrPut"] == trades[4]["callOrPut"] == "C":
+            contract_type = "C"
+        elif trades[0]["callOrPut"] == trades[1]["callOrPut"] == trades[2]["callOrPut"] == trades[3]["callOrPut"] == trades[4]["callOrPut"] == "P":
+            contract_type = "P"
+
+        # strike: "A<B<C<D<E" for 5-leg strategies
+        if (trades[0]["strike"] is None or trades[1]["strike"] is None or trades[2]["strike"] is None or 
+            trades[3]["strike"] is None or trades[4]["strike"] is None):
+            strike = "N"
+        elif (trades[0]["strike"] < trades[1]["strike"] < trades[2]["strike"] < 
+              trades[3]["strike"] < trades[4]["strike"]):
+            strike = "A<B<C<D<E"
+
+        # expiry: "A=B=C=D=E" for 5-leg strategies
+        if (trades[0]["expiry"] == trades[1]["expiry"] == trades[2]["expiry"] == 
+            trades[3]["expiry"] == trades[4]["expiry"]):
+            expiry = "A=B=C=D=E"
+
+        # size_ratio: "1:2:1:2:1" for albatross strategies
+        if (trades[0]["size"] == trades[2]["size"] == trades[4]["size"] and
+            trades[1]["size"] == trades[3]["size"] and
+            trades[1]["size"] == trades[0]["size"] * 2):
+            size_ratio = "1:2:1:2:1"
+
+        # side
+        sideA = "A" if trades[0]["direction"].upper() == "BUY" else "-A"
+        sideB = "+B" if trades[1]["direction"].upper() == "BUY" else "-B"
+        sideC = "+C" if trades[2]["direction"].upper() == "BUY" else "-C"
+        sideD = "+D" if trades[3]["direction"].upper() == "BUY" else "-D"
+        sideE = "+E" if trades[4]["direction"].upper() == "BUY" else "-E"
+        side = sideA + sideB + sideC + sideD + sideE
 
     # 根据参数查询策略名称和视图
     result = deribit_combo.loc[(deribit_combo["Legs"]==legs) &
