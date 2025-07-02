@@ -8,7 +8,6 @@ logger = logging.getLogger(__name__)
 class InsightsGenerator:
     def __init__(self):
         if config.openai_api_key:
-            openai.api_key = config.openai_api_key
             self.enabled = True
         else:
             self.enabled = False
@@ -49,7 +48,8 @@ Focus on:
 
 Keep it concise, professional, and actionable."""
 
-            response = openai.ChatCompletion.create(
+            client = openai.OpenAI(api_key=config.openai_api_key)
+            response = client.chat.completions.create(
                 model="gpt-4.1-nano",
                 messages=[
                     {"role": "system", "content": "You are an expert options trader providing concise market insights."},
