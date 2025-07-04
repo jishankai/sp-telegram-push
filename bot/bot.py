@@ -597,7 +597,7 @@ async def push_block_trade_to_telegram():
                             strategy_name, trades, currency, total_size, premium, float(index_price)
                         )
                         if insights:
-                            text += '\n'
+                            text += '\n\n'
                             text += f'🧠 <b>AI Insights</b>: <i>{insights}</i>'
                     except Exception as e:
                         logger.error(f"Failed to generate insights: {e}")
@@ -804,7 +804,7 @@ async def push_block_trade_to_telegram():
 async def push_advertisement_to_groups():
     while True:
         try:
-            text = f'<b>🚀 <a href="https://pdgm.co/3ABtI6m">Paradigm</a>: Block size liquidity, tightest price. No fees</b>'
+            text = f'<b>🚀 <a href="https://t.signalplus.com">SignalPlus RFQ</a>: Block size liquidity, tightest price. No fees</b>'
             for chat_id in config.all_group_chat_ids:
                 await bot.send_message(
                     chat_id=chat_id,
@@ -1210,9 +1210,9 @@ async def generate_trade_message_with_insights(data):
                 # Insert insights before the source/tag section
                 parts = text.rsplit('\n\n', 1)
                 if len(parts) == 2:
-                    text = parts[0] + f'\n🧠 <b>AI Insights</b>: <i>{insights}</i>\n\n' + parts[1]
+                    text = parts[0] + f'\n\n🧠 <b>AI Insights</b>: <i>{insights}</i>\n\n' + parts[1]
                 else:
-                    text += f'\n🧠 <b>AI Insights</b>: <i>{insights}</i>'
+                    text += f'\n\n🧠 <b>AI Insights</b>: <i>{insights}</i>'
         except Exception as e:
             logger.error(f"Failed to generate insights for single trade: {e}")
     

@@ -117,7 +117,7 @@ def push_plot():
     text = f'📊 {title}'
     text += '\n\n'
     if currency == 'BTC':
-        text += '<b>🚀 <a href="https://pdgm.co/3ABtI6m">Paradigm</a>: Block size liquidity, tightest price. No fees</b>'
+        text += '<b>🚀 <a href="https://t.signalplus.com">SignalPlus RFQ</a>: Block size liquidity, tightest price. No fees</b>'
     else:
         text += '<b>📈 <a href="https://t.signalplus.com/user/login?redirect=%2Fdashboard">SignalPlus</a>: Advanced options trading with zero fees</b>'
     asyncio.run(bot.send_photo(chat_id=config_yaml["group_chat_id"], photo=buf, caption=text, parse_mode=ParseMode.HTML))

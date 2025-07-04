@@ -50,7 +50,7 @@ Keep it concise, professional, and actionable."""
 
             client = openai.OpenAI(api_key=config.openai_api_key)
             response = client.chat.completions.create(
-                model="gpt-4.1-nano",
+                model="gpt-4.1",
                 messages=[
                     {"role": "system", "content": "You are an expert options trader providing concise market insights."},
                     {"role": "user", "content": prompt}
