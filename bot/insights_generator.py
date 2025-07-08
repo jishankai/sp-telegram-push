@@ -36,17 +36,25 @@ class InsightsGenerator:
             context = self._build_trade_context(strategy_name, trades, currency, total_size, premium, index_price)
             
             # Create prompt for insights
-            prompt = f"""As an options trading expert, provide a brief market insight (max 100 words) for this trade:
+            prompt = f"""You are an options trading expert. Based on the following block trade, write a concise (≤100 words) market insight for Telegram users.
 
 {context}
 
-Focus on:
-- Market outlook implied by this strategy
-- Risk/reward profile
-- Key levels to watch
-- Market sentiment indicator
+Include:
 
-Keep it concise, professional, and actionable."""
+- Implied market outlook (directional bias)
+
+- Time sensitivity (short/medium/long-term)
+
+- Risk/reward profile
+
+- Key strike/expiry levels
+
+- Volatility sentiment (long/short vol bias)
+
+- Any sentiment or positioning signals
+
+Tone: professional, concise, and actionable. Avoid fluff."""
 
             client = openai.OpenAI(api_key=config.openai_api_key)
             response = client.chat.completions.create(
