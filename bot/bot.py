@@ -594,7 +594,7 @@ async def push_block_trade_to_telegram():
                 if ((currency == "BTC" and float(total_size) >= 100) or (currency == "ETH" and float(total_size) >= 1000)):
                     try:
                         insights = await insights_generator.generate_trade_insights(
-                            strategy_name, trades, currency, total_size, premium, float(index_price)
+                            strategy_name, trades, currency, trades[0]["size"], premium, float(index_price)
                         )
                         if insights:
                             text += '\n\n'
