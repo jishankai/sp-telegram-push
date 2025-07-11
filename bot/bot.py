@@ -417,6 +417,7 @@ async def push_block_trade_to_telegram():
                 expiries_seen = {}
                 prices = []
                 premium = 0
+                total_premium = 0
                 delta = 0
                 gamma = 0
                 vega = 0
@@ -446,7 +447,7 @@ async def push_block_trade_to_telegram():
                             size = float(trade["size"])
                         else:
                             size = -float(trade["size"])
-                        premium += float(trade["price"]) * size
+                        total_premium += float(trade["price"]) * size
                         total_size += abs(size)
                         # if greeks
                         if "greeks" in trade:
@@ -460,7 +461,7 @@ async def push_block_trade_to_telegram():
                         trade["strike"] = None
                         trade["expiry"] = None
 
-                premium = premium / float(trades[0]["size"])
+                premium = total_premium / float(trades[0]["size"])
 
                 result, size_ratio, legs = get_block_trade_strategy(trades)
                 # 输出结果
@@ -517,6 +518,7 @@ async def push_block_trade_to_telegram():
                         else:
                             trade_summary = f'🟥 Sold {trades[0]["size"]}x {"🔶" if currency=="BTC" else "🔷"} {trades[0]["currency"]} '
                         premium = -premium
+                        total_premium = -total_premium
 
                     if not pd.isna(view):
                         if size_ratio == "1:N" or size_ratio == "N:1":
@@ -594,7 +596,7 @@ async def push_block_trade_to_telegram():
                 if ((currency == "BTC" and float(total_size) >= 100) or (currency == "ETH" and float(total_size) >= 1000)):
                     try:
                         insights = await insights_generator.generate_trade_insights(
-                            strategy_name, trades, currency, trades[0]["size"], premium, float(index_price)
+                            strategy_name, trades, currency, trades[0]["size"], total_premium, float(index_price)
                         )
                         if insights:
                             text += '\n\n'

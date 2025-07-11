@@ -13,7 +13,7 @@ class InsightsGenerator:
             self.enabled = False
             logger.warning("OpenAI API key not configured, insights disabled")
 
-    async def generate_trade_insights(self, strategy_name: str, trades: List[Dict], currency: str, total_size: float, premium: float, index_price: float) -> Optional[str]:
+    async def generate_trade_insights(self, strategy_name: str, trades: List[Dict], currency: str, size: float, premium: float, index_price: float) -> Optional[str]:
         """
         Generate insights for options trading strategy using OpenAI API
         
@@ -21,7 +21,7 @@ class InsightsGenerator:
             strategy_name: Name of the trading strategy (e.g., "LONG BTC CALL SPREAD")
             trades: List of trade objects with details
             currency: Currency (BTC/ETH)
-            total_size: Total position size
+            size: Position size
             premium: Net premium paid/received
             index_price: Current underlying price
             
@@ -33,28 +33,42 @@ class InsightsGenerator:
             
         try:
             # Build context for the AI
-            context = self._build_trade_context(strategy_name, trades, currency, total_size, premium, index_price)
+            context = self._build_trade_context(strategy_name, trades, currency, size, premium, index_price)
             
             # Create prompt for insights
-            prompt = f"""You are an options trading expert. Based on the following block trade, write a concise (≤100 words) market insight for Telegram users.
+            prompt = f"""You are an options trading expert. Based on the following block trade, generate a concise (≤100 words) market insight for Telegram users.
 
 {context}
 
-Include:
+Focus on:
 
-- Implied market outlook (directional bias)
+Market direction & timing (bullish/bearish/neutral; short/medium/long-term)
 
-- Time sensitivity (short/medium/long-term)
+Risk/reward setup (defined risk, convexity, premium flow)
 
-- Risk/reward profile
+Key strikes & expiries (levels that matter)
 
-- Key strike/expiry levels
+Volatility view (long/short vol, IV context)
 
-- Volatility sentiment (long/short vol bias)
+Positioning/sentiment signal (dealer flow, hedging, crowd behavior)
 
-- Any sentiment or positioning signals
+Tone: professional, actionable, to the point. For fast-paced traders.
 
-Tone: professional, concise, and actionable. Avoid fluff."""
+✅ Do:
+
+Be specific, e.g. “Bullish bias into July expiry” or “Long vol via OTM put spread”
+
+Emphasize trade intent, structure logic, and possible market implications
+
+❌ Do not:
+
+Do not describe the trade structure only (assume the reader has seen it)
+
+Do not give generic commentary (e.g. “Vol is elevated” without context)
+
+Do not speculate without evidence from trade data
+
+Do not use vague timeframes (e.g. “soon”, “in the future”)"""
 
             client = openai.OpenAI(api_key=config.openai_api_key)
             response = client.chat.completions.create(
@@ -80,14 +94,14 @@ Tone: professional, concise, and actionable. Avoid fluff."""
             logger.error(f"Failed to generate insights: {e}")
             return None
 
-    def _build_trade_context(self, strategy_name: str, trades: List[Dict], currency: str, total_size: float, premium: float, index_price: float) -> str:
+    def _build_trade_context(self, strategy_name: str, trades: List[Dict], currency: str, size: float, premium: float, index_price: float) -> str:
         """Build context string for AI prompt"""
         
         context_parts = [
             f"Strategy: {strategy_name}",
             f"Asset: {currency}",
             f"Current Price: ${index_price:,.2f}",
-            f"Position Size: {total_size}",
+            f"Position Size: {size}",
             f"Net Premium: {premium:,.4f} {'₿' if currency=='BTC' else 'Ξ'}"
         ]
         
