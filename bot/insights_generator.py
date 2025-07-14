@@ -107,22 +107,41 @@ Do not use vague timeframes (e.g. “soon”, “in the future”)"""
             f"Net Premium: {premium:,.4f} {'₿' if currency=='BTC' else 'Ξ'}"
         ]
         
-        # Add strike and expiry info if available
+        # Add detailed trade leg information for better LLM understanding
         if trades and len(trades) > 0:
-            if trades[0].get("strike"):
-                strikes = [str(trade.get("strike", "")) for trade in trades if trade.get("strike")]
-                if strikes:
-                    context_parts.append(f"Strikes: {'/'.join(strikes)}")
-                    
-            if trades[0].get("expiry"):
-                expiries = list(set([trade.get("expiry", "") for trade in trades if trade.get("expiry")]))
-                if expiries:
-                    context_parts.append(f"Expiry: {'/'.join(expiries)}")
-                    
-            # Add IV if available
-            if trades[0].get("iv"):
-                avg_iv = sum([float(trade.get("iv", 0)) for trade in trades if trade.get("iv")]) / len([t for t in trades if t.get("iv")])
-                context_parts.append(f"Avg IV: {avg_iv:.1f}%")
+            trade_legs = []
+            for i, trade in enumerate(trades):
+                leg_info = []
+                
+                # Direction (buy/sell)
+                if trade.get("direction"):
+                    leg_info.append(trade["direction"].upper())
+                
+                # Call or Put
+                if trade.get("callOrPut"):
+                    leg_info.append(trade["callOrPut"].upper())
+                
+                # Strike
+                if trade.get("strike"):
+                    leg_info.append(f"${trade['strike']}")
+                
+                # Expiry
+                if trade.get("expiry"):
+                    leg_info.append(trade["expiry"])
+                
+                # Size
+                if trade.get("size"):
+                    leg_info.append(f"Size: {trade['size']}")
+                
+                # IV
+                if trade.get("iv"):
+                    leg_info.append(f"IV: {trade['iv']:.1f}%")
+                
+                if leg_info:
+                    trade_legs.append(f"Leg {i+1}: {' '.join(leg_info)}")
+            
+            if trade_legs:
+                context_parts.extend(trade_legs)
         
         return "\n".join(context_parts)
 
