@@ -1,6 +1,7 @@
 import logging
 import openai
 from typing import List, Dict, Optional
+from datetime import datetime
 import config
 
 logger = logging.getLogger(__name__)
@@ -36,7 +37,8 @@ class InsightsGenerator:
             context = self._build_trade_context(strategy_name, trades, currency, size, premium, index_price)
             
             # Create prompt for insights
-            prompt = f"""You are an options trading expert. Based on the following block trade, generate a concise (≤100 words) market insight for Telegram users.
+            current_date = datetime.now().strftime("%Y-%m-%d")
+            prompt = f"""You are an options trading expert analyzing a block trade. Today's date is {current_date}. Based on the following trade information, generate a concise (≤100 words) market insight for Telegram users.
 
 {context}
 
