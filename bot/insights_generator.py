@@ -38,39 +38,34 @@ class InsightsGenerator:
             
             # Create prompt for insights
             current_date = datetime.now().strftime("%Y-%m-%d")
-            prompt = f"""You are an options trading expert analyzing a block trade. Today's date is {current_date}. Based on the following trade information, generate a concise (≤100 words) market insight for Telegram users.
+            prompt = f"""You are an options trading expert analyzing a block trade initiated by a client (non-dealer). Today's date is {current_date}. Based on the following trade information, generate a concise (≤100 words) market insight for Telegram users.
 
 {context}
 
-Focus on:
+Context:
+- Client-initiated trade (dealer is counterparty/liquidity provider)
+- Client buying = dealer short; client selling = dealer long
+- Use Greeks data for risk assessment and positioning analysis
 
-Market direction & timing (bullish/bearish/neutral; short/medium/long-term)
+Analysis Framework:
+1. Market Directional Bias: bullish/bearish/neutral outlook with timeframe
+2. Risk/Reward Profile: max gain/loss, breakeven levels, premium flow
+3. Key Levels: important strikes and expiries that matter
+4. Volatility Position: long/short vol, IV context relative to current levels
+5. Market Signal: positioning implications, dealer flow, sentiment
 
-Risk/reward setup (defined risk, convexity, premium flow)
+Requirements:
+- Be specific with timeframes and levels (e.g., "Bullish bias into July expiry")
+- Emphasize trade intent and market implications
+- Use Greeks for risk analysis (delta exposure, gamma effects, vega positioning)
+- Calculate breakeven/max P&L using correct formulas, double check the result
+- Professional tone for fast-paced traders
 
-Key strikes & expiries (levels that matter)
-
-Volatility view (long/short vol, IV context)
-
-Positioning/sentiment signal (dealer flow, hedging, crowd behavior)
-
-Tone: professional, actionable, to the point. For fast-paced traders.
-
-✅ Do:
-
-Be specific, e.g. “Bullish bias into July expiry” or “Long vol via OTM put spread”
-
-Emphasize trade intent, structure logic, and possible market implications
-
-❌ Do not:
-
-Do not describe the trade structure only (assume the reader has seen it)
-
-Do not give generic commentary (e.g. “Vol is elevated” without context)
-
-Do not speculate without evidence from trade data
-
-Do not use vague timeframes (e.g. “soon”, “in the future”)"""
+Avoid:
+- Generic commentary without trade-specific context
+- Vague timeframes ("soon", "in the future")  
+- Pure trade structure description (assume reader sees the trade)
+- Speculation without supporting trade data"""
 
             client = openai.OpenAI(api_key=config.openai_api_key)
             response = client.chat.completions.create(
@@ -136,6 +131,24 @@ Do not use vague timeframes (e.g. “soon”, “in the future”)"""
                 # IV
                 if trade.get("iv"):
                     leg_info.append(f"IV: {trade['iv']:.1f}%")
+                
+                # Greeks
+                if trade.get("greeks"):
+                    greeks = trade["greeks"]
+                    greek_parts = []
+                    if "delta" in greeks:
+                        greek_parts.append(f"Δ: {float(greeks['delta']):.3f}")
+                    if "gamma" in greeks:
+                        greek_parts.append(f"Γ: {float(greeks['gamma']):.3f}")
+                    if "vega" in greeks:
+                        greek_parts.append(f"ν: {float(greeks['vega']):.3f}")
+                    if "theta" in greeks:
+                        greek_parts.append(f"Θ: {float(greeks['theta']):.3f}")
+                    if "rho" in greeks:
+                        greek_parts.append(f"ρ: {float(greeks['rho']):.3f}")
+                    
+                    if greek_parts:
+                        leg_info.append(f"Greeks: {', '.join(greek_parts)}")
                 
                 if leg_info:
                     trade_legs.append(f"Leg {i+1}: {' '.join(leg_info)}")
