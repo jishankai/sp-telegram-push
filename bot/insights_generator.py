@@ -38,34 +38,30 @@ class InsightsGenerator:
             
             # Create prompt for insights
             current_date = datetime.now().strftime("%Y-%m-%d")
-            prompt = f"""You are an options trading expert analyzing a block trade initiated by a client (non-dealer). Today's date is {current_date}. Based on the following trade information, generate a concise (≤100 words) market insight for Telegram users.
+            prompt = f"""You are an options trading expert analyzing a block trade from the perspective of the trader who initiated it. Today's date is {current_date}. Based on the following trade information, generate a concise (≤100 words) market insight for Telegram users.
 
 {context}
 
-Context:
-- Client-initiated trade (dealer is counterparty/liquidity provider)
-- Client buying = dealer short; client selling = dealer long
-- Use Greeks data for risk assessment and positioning analysis
-
 Analysis Framework:
-1. Market Directional Bias: bullish/bearish/neutral outlook with timeframe
-2. Risk/Reward Profile: max gain/loss, breakeven levels, premium flow
-3. Key Levels: important strikes and expiries that matter
-4. Volatility Position: long/short vol, IV context relative to current levels
-5. Market Signal: positioning implications, dealer flow, sentiment
+1. Market Directional Bias: What market view does this trade express? (bullish/bearish/neutral with timeframe)
+2. Risk Profile: Describe the trader's risk exposure and positioning intent
+3. Key Levels: Highlight important strikes and expiries relevant to this position
+4. Volatility Positioning: Is the trader long/short volatility? What's the IV context?
+5. Market Signal: What does this positioning suggest about market sentiment?
 
 Requirements:
+- Analyze from the trader's perspective who initiated this position
+- Focus on market view and positioning intent, not calculations
+- Use Greeks data for qualitative risk assessment only
 - Be specific with timeframes and levels (e.g., "Bullish bias into July expiry")
-- Emphasize trade intent and market implications
-- Use Greeks for risk analysis (delta exposure, gamma effects, vega positioning)
-- Calculate breakeven/max P&L using correct formulas, double check the result
 - Professional tone for fast-paced traders
 
 Avoid:
+- Any mathematical calculations or computations
+- Counterparty analysis or market maker perspectives
 - Generic commentary without trade-specific context
-- Vague timeframes ("soon", "in the future")  
-- Pure trade structure description (assume reader sees the trade)
-- Speculation without supporting trade data"""
+- Vague timeframes ("soon", "in the future")
+- Pure trade structure description (assume reader sees the trade)"""
 
             client = openai.OpenAI(api_key=config.openai_api_key)
             response = client.chat.completions.create(
@@ -102,8 +98,19 @@ Avoid:
             f"Net Premium: {premium:,.4f} {'₿' if currency=='BTC' else 'Ξ'}"
         ]
         
-        # Add detailed trade leg information for better LLM understanding
+        # Calculate valuable metrics from trades data
         if trades and len(trades) > 0:
+            # Calculate aggregated metrics
+            total_delta = 0
+            total_gamma = 0
+            total_vega = 0
+            total_theta = 0
+            avg_iv = 0
+            iv_count = 0
+            strikes = []
+            expiries = []
+            moneyness_values = []
+            
             trade_legs = []
             for i, trade in enumerate(trades):
                 leg_info = []
@@ -116,13 +123,20 @@ Avoid:
                 if trade.get("callOrPut"):
                     leg_info.append(trade["callOrPut"].upper())
                 
-                # Strike
+                # Strike and moneyness calculation
                 if trade.get("strike"):
-                    leg_info.append(f"${trade['strike']}")
+                    strike = float(trade["strike"])
+                    strikes.append(strike)
+                    moneyness = strike / index_price
+                    moneyness_values.append(moneyness)
+                    leg_info.append(f"${strike}")
+                    leg_info.append(f"Moneyness: {moneyness:.2f}")
                 
                 # Expiry
                 if trade.get("expiry"):
-                    leg_info.append(trade["expiry"])
+                    expiry = trade["expiry"]
+                    expiries.append(expiry)
+                    leg_info.append(expiry)
                 
                 # Size
                 if trade.get("size"):
@@ -130,22 +144,36 @@ Avoid:
                 
                 # IV
                 if trade.get("iv"):
-                    leg_info.append(f"IV: {trade['iv']:.1f}%")
+                    iv = float(trade["iv"])
+                    avg_iv += iv
+                    iv_count += 1
+                    leg_info.append(f"IV: {iv:.1f}%")
                 
-                # Greeks
+                # Greeks and aggregate them
                 if trade.get("greeks"):
                     greeks = trade["greeks"]
                     greek_parts = []
+                    trade_size = float(trade.get("size", 0))
+                    
                     if "delta" in greeks:
-                        greek_parts.append(f"Δ: {float(greeks['delta']):.3f}")
+                        delta = float(greeks["delta"])
+                        total_delta += delta * trade_size
+                        greek_parts.append(f"Δ: {delta:.3f}")
                     if "gamma" in greeks:
-                        greek_parts.append(f"Γ: {float(greeks['gamma']):.3f}")
+                        gamma = float(greeks["gamma"])
+                        total_gamma += gamma * trade_size
+                        greek_parts.append(f"Γ: {gamma:.3f}")
                     if "vega" in greeks:
-                        greek_parts.append(f"ν: {float(greeks['vega']):.3f}")
+                        vega = float(greeks["vega"])
+                        total_vega += vega * trade_size
+                        greek_parts.append(f"ν: {vega:.3f}")
                     if "theta" in greeks:
-                        greek_parts.append(f"Θ: {float(greeks['theta']):.3f}")
+                        theta = float(greeks["theta"])
+                        total_theta += theta * trade_size
+                        greek_parts.append(f"Θ: {theta:.3f}")
                     if "rho" in greeks:
-                        greek_parts.append(f"ρ: {float(greeks['rho']):.3f}")
+                        rho = float(greeks["rho"])
+                        greek_parts.append(f"ρ: {rho:.3f}")
                     
                     if greek_parts:
                         leg_info.append(f"Greeks: {', '.join(greek_parts)}")
@@ -153,7 +181,84 @@ Avoid:
                 if leg_info:
                     trade_legs.append(f"Leg {i+1}: {' '.join(leg_info)}")
             
+            # Add calculated metrics to context
+            context_parts.append("\n--- Calculated Metrics ---")
+            
+            # Portfolio Greeks
+            if total_delta != 0:
+                context_parts.append(f"Total Delta Exposure: {total_delta:.2f}")
+            if total_gamma != 0:
+                context_parts.append(f"Total Gamma Exposure: {total_gamma:.4f}")
+            if total_vega != 0:
+                context_parts.append(f"Total Vega Exposure: {total_vega:.2f}")
+            if total_theta != 0:
+                context_parts.append(f"Total Theta Exposure: {total_theta:.2f}")
+            
+            # IV Analysis
+            if iv_count > 0:
+                avg_iv = avg_iv / iv_count
+                context_parts.append(f"Average IV: {avg_iv:.1f}%")
+            
+            # Strike Analysis
+            if strikes:
+                min_strike = min(strikes)
+                max_strike = max(strikes)
+                context_parts.append(f"Strike Range: ${min_strike} - ${max_strike}")
+                
+                # Moneyness analysis
+                if moneyness_values:
+                    avg_moneyness = sum(moneyness_values) / len(moneyness_values)
+                    context_parts.append(f"Average Moneyness: {avg_moneyness:.2f}")
+                    
+                    # Categorize position
+                    if avg_moneyness < 0.95:
+                        context_parts.append("Position: Deep OTM")
+                    elif avg_moneyness < 0.98:
+                        context_parts.append("Position: OTM")
+                    elif avg_moneyness < 1.02:
+                        context_parts.append("Position: ATM")
+                    elif avg_moneyness < 1.05:
+                        context_parts.append("Position: ITM")
+                    else:
+                        context_parts.append("Position: Deep ITM")
+            
+            # Expiry Analysis
+            if expiries:
+                unique_expiries = list(set(expiries))
+                context_parts.append(f"Expiries: {', '.join(unique_expiries)}")
+                
+                # Calculate DTE (Days to Expiry) for closest expiry
+                try:
+                    from datetime import datetime
+                    closest_expiry = min(unique_expiries)
+                    expiry_date = datetime.strptime(closest_expiry, "%d%b%y")
+                    current_date = datetime.now()
+                    dte = (expiry_date - current_date).days
+                    context_parts.append(f"Days to Closest Expiry: {dte}")
+                    
+                    # Time decay classification
+                    if dte <= 7:
+                        context_parts.append("Time Decay: High (weekly expiry)")
+                    elif dte <= 30:
+                        context_parts.append("Time Decay: Medium (monthly expiry)")
+                    else:
+                        context_parts.append("Time Decay: Low (longer-term)")
+                except:
+                    pass
+            
+            # Premium Analysis
+            if premium != 0:
+                premium_pct = premium * 100
+                context_parts.append(f"Premium as % of Spot: {premium_pct:.3f}%")
+                
+                if premium > 0:
+                    context_parts.append("Premium Flow: Net Debit (paid premium)")
+                else:
+                    context_parts.append("Premium Flow: Net Credit (received premium)")
+            
+            # Add trade legs
             if trade_legs:
+                context_parts.append("\n--- Trade Legs ---")
                 context_parts.extend(trade_legs)
         
         return "\n".join(context_parts)
