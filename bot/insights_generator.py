@@ -120,15 +120,17 @@ Avoid:
                     leg_info.append(trade["direction"].upper())
                 
                 # Call or Put
+                call_or_put = None
                 if trade.get("callOrPut"):
-                    leg_info.append(trade["callOrPut"].upper())
+                    call_or_put = trade["callOrPut"]
+                    leg_info.append(call_or_put)
                 
                 # Strike and moneyness calculation
                 if trade.get("strike"):
                     strike = float(trade["strike"])
                     strikes.append(strike)
                     moneyness = strike / index_price
-                    moneyness_values.append(moneyness)
+                    moneyness_values.append((moneyness, call_or_put))
                     leg_info.append(f"${strike}")
                     leg_info.append(f"Moneyness: {moneyness:.2f}")
                 
@@ -207,20 +209,42 @@ Avoid:
                 
                 # Moneyness analysis
                 if moneyness_values:
-                    avg_moneyness = sum(moneyness_values) / len(moneyness_values)
+                    avg_moneyness = sum(m[0] for m in moneyness_values) / len(moneyness_values)
                     context_parts.append(f"Average Moneyness: {avg_moneyness:.2f}")
                     
-                    # Categorize position
-                    if avg_moneyness < 0.95:
-                        context_parts.append("Position: Deep OTM")
-                    elif avg_moneyness < 0.98:
-                        context_parts.append("Position: OTM")
-                    elif avg_moneyness < 1.02:
-                        context_parts.append("Position: ATM")
-                    elif avg_moneyness < 1.05:
-                        context_parts.append("Position: ITM")
-                    else:
-                        context_parts.append("Position: Deep ITM")
+                    # Categorize position based on option type
+                    position_types = []
+                    for moneyness, option_type in moneyness_values:
+                        if option_type == "C":  # Call option
+                            if moneyness > 1.05:
+                                position_types.append("Deep OTM")
+                            elif moneyness > 1.02:
+                                position_types.append("OTM")
+                            elif moneyness > 0.98:
+                                position_types.append("ATM")
+                            elif moneyness > 0.95:
+                                position_types.append("ITM")
+                            else:
+                                position_types.append("Deep ITM")
+                        elif option_type == "P":  # Put option
+                            if moneyness < 0.95:
+                                position_types.append("Deep OTM")
+                            elif moneyness < 0.98:
+                                position_types.append("OTM")
+                            elif moneyness < 1.02:
+                                position_types.append("ATM")
+                            elif moneyness < 1.05:
+                                position_types.append("ITM")
+                            else:
+                                position_types.append("Deep ITM")
+                    
+                    if position_types:
+                        # If all legs have same classification, show it; otherwise show mixed
+                        unique_positions = list(set(position_types))
+                        if len(unique_positions) == 1:
+                            context_parts.append(f"Position: {unique_positions[0]}")
+                        else:
+                            context_parts.append(f"Position: Mixed ({'/'.join(unique_positions)})")
             
             # Expiry Analysis
             if expiries:
