@@ -155,7 +155,10 @@ Avoid:
                 if trade.get("greeks"):
                     greeks = trade["greeks"]
                     greek_parts = []
-                    trade_size = float(trade.get("size", 0))
+                    if trade["direction"].upper() == "BUY":
+                        trade_size = float(trade.get("size", 0))
+                    else:
+                        trade_size = -float(trade.get("size", 0))
                     
                     if "delta" in greeks:
                         delta = float(greeks["delta"])
