@@ -1,6 +1,7 @@
 import logging
 import openai
-from typing import List, Dict, Optional
+import math
+from typing import List, Dict, Optional, Tuple
 from datetime import datetime
 import config
 
@@ -98,6 +99,35 @@ Avoid:
             f"Net Premium: {premium:,.4f} {'₿' if currency=='BTC' else 'Ξ'}"
         ]
         
+        # Calculate max gain/loss for the strategy
+        max_gain, max_loss = self._get_simplified_max_gain_loss(strategy_name, trades, premium)
+        if max_gain is None and max_loss is None:
+            max_gain, max_loss = self._calculate_max_gain_loss(strategy_name, trades, index_price, premium)
+        
+        # Add max gain/loss to context
+        if max_gain is not None or max_loss is not None:
+            context_parts.append("\n--- Risk/Reward Profile ---")
+            if max_gain is not None:
+                if abs(max_gain) < 0.0001:
+                    context_parts.append("Max Gain: ~0")
+                else:
+                    context_parts.append(f"Max Gain: {max_gain:,.4f} {'₿' if currency=='BTC' else 'Ξ'}")
+            else:
+                context_parts.append("Max Gain: Unlimited")
+            
+            if max_loss is not None:
+                if abs(max_loss) < 0.0001:
+                    context_parts.append("Max Loss: ~0")
+                else:
+                    context_parts.append(f"Max Loss: {abs(max_loss):,.4f} {'₿' if currency=='BTC' else 'Ξ'}")
+            else:
+                context_parts.append("Max Loss: Unlimited")
+            
+            # Add risk-reward ratio if both are finite
+            if max_gain is not None and max_loss is not None and max_loss != 0:
+                risk_reward_ratio = abs(max_gain) / abs(max_loss)
+                context_parts.append(f"Risk-Reward Ratio: 1:{risk_reward_ratio:.2f}")
+
         # Calculate valuable metrics from trades data
         if trades and len(trades) > 0:
             # Calculate aggregated metrics
@@ -289,6 +319,307 @@ Avoid:
                 context_parts.extend(trade_legs)
         
         return "\n".join(context_parts)
+
+    def _calculate_max_gain_loss(self, strategy_name: str, trades: List[Dict], index_price: float, premium: float) -> Tuple[Optional[float], Optional[float]]:
+        """
+        Calculate maximum gain and maximum loss for options strategies.
+        
+        Args:
+            strategy_name: Name of the trading strategy
+            trades: List of trade objects with details
+            index_price: Current underlying price
+            premium: Net premium paid/received
+            
+        Returns:
+            Tuple of (max_gain, max_loss) in currency units, None if cannot calculate
+        """
+        if not trades or len(trades) == 0:
+            return None, None
+            
+        try:
+            # Get strikes and option types
+            legs = []
+            for trade in trades:
+                if not all(key in trade and trade[key] is not None for key in ['strike', 'callOrPut', 'direction', 'size']):
+                    continue
+                    
+                legs.append({
+                    'strike': float(trade['strike']),
+                    'option_type': trade['callOrPut'],  # 'C' or 'P'
+                    'direction': trade['direction'].upper(),  # 'BUY' or 'SELL'
+                    'size': abs(float(trade['size'])),
+                    'multiplier': 1 if trade['direction'].upper() == 'BUY' else -1
+                })
+            
+            if not legs:
+                return None, None
+            
+            # Check if strategy has unlimited profit/loss potential
+            has_unlimited_gain = False
+            has_unlimited_loss = False
+            
+            # Analyze legs for unlimited potential
+            net_call_multiplier = 0
+            net_put_multiplier = 0
+            
+            for leg in legs:
+                if leg['option_type'] == 'C':
+                    net_call_multiplier += leg['multiplier'] * leg['size']
+                else:
+                    net_put_multiplier += leg['multiplier'] * leg['size']
+            
+            # Long calls (net positive call exposure) have unlimited upside
+            if net_call_multiplier > 0:
+                has_unlimited_gain = True
+            # Short calls (net negative call exposure) have unlimited downside  
+            elif net_call_multiplier < 0:
+                has_unlimited_loss = True
+            
+            # Long puts have limited gain (strike - premium), not unlimited
+            # Short puts have limited loss (strike + premium), not unlimited
+            
+            if has_unlimited_gain or has_unlimited_loss:
+                # For unlimited strategies, still calculate breakeven and limited side
+                min_strike = min(leg['strike'] for leg in legs)
+                max_strike = max(leg['strike'] for leg in legs)
+                
+                # Calculate limited profit/loss at key points
+                test_prices = [0.01, min_strike * 0.5, min_strike, (min_strike + max_strike) / 2, max_strike, max_strike * 1.5]
+                payoffs = []
+                
+                for spot_price in test_prices:
+                    total_payoff = -premium
+                    for leg in legs:
+                        if leg['option_type'] == 'C':
+                            intrinsic = max(0, spot_price - leg['strike'])
+                        else:
+                            intrinsic = max(0, leg['strike'] - spot_price)
+                        leg_payoff = leg['multiplier'] * leg['size'] * intrinsic
+                        total_payoff += leg_payoff
+                    payoffs.append(total_payoff)
+                
+                if has_unlimited_gain:
+                    max_gain = None  # Unlimited
+                    max_loss = min(payoffs)
+                else:  # has_unlimited_loss
+                    max_gain = max(payoffs)
+                    max_loss = None  # Unlimited
+            else:
+                # For strategies with limited profit/loss, use comprehensive range
+                min_strike = min(leg['strike'] for leg in legs)
+                max_strike = max(leg['strike'] for leg in legs)
+                
+                price_range = []
+                step = (max_strike - min_strike) / 50 if max_strike > min_strike else max_strike * 0.02
+                start_price = max(0.01, min_strike - max_strike * 0.2)
+                end_price = max_strike * 1.5
+                
+                current = start_price
+                while current <= end_price:
+                    price_range.append(current)
+                    current += step
+                
+                payoffs = []
+                for spot_price in price_range:
+                    total_payoff = -premium
+                    for leg in legs:
+                        if leg['option_type'] == 'C':
+                            intrinsic = max(0, spot_price - leg['strike'])
+                        else:
+                            intrinsic = max(0, leg['strike'] - spot_price)
+                        leg_payoff = leg['multiplier'] * leg['size'] * intrinsic
+                        total_payoff += leg_payoff
+                    payoffs.append(total_payoff)
+                
+                max_gain = max(payoffs) if payoffs else None
+                max_loss = min(payoffs) if payoffs else None
+                
+            return max_gain, max_loss
+            
+        except Exception as e:
+            logger.error(f"Error calculating max gain/loss: {e}")
+            return None, None
+
+    def _get_simplified_max_gain_loss(self, strategy_name: str, trades: List[Dict], premium: float) -> Tuple[Optional[float], Optional[float]]:
+        """
+        Get simplified max gain/loss for common strategies without complex calculations.
+        """
+        strategy_upper = strategy_name.upper()
+        
+        try:
+            # Single leg strategies
+            if "LONG CALL" in strategy_upper and "SPREAD" not in strategy_upper:
+                return None, abs(premium)  # Unlimited upside, limited downside (premium paid)
+            
+            elif "SHORT CALL" in strategy_upper and "SPREAD" not in strategy_upper:
+                return abs(premium), None  # Limited upside (premium received), unlimited downside
+            
+            elif "LONG PUT" in strategy_upper and "SPREAD" not in strategy_upper:
+                if trades and len(trades) > 0 and trades[0].get('strike'):
+                    # Max gain when underlying goes to 0: strike - premium_paid
+                    max_gain = float(trades[0]['strike']) - abs(premium)
+                    # Max loss is premium paid
+                    return max_gain, abs(premium)
+                return None, abs(premium)
+            
+            elif "SHORT PUT" in strategy_upper and "SPREAD" not in strategy_upper:
+                if trades and len(trades) > 0 and trades[0].get('strike'):
+                    # Max loss when underlying goes to 0: strike - premium_received
+                    max_loss = float(trades[0]['strike']) - abs(premium)
+                    # Max gain is premium received
+                    return abs(premium), max_loss
+                return abs(premium), None
+            
+            # Spread strategies
+            elif "SPREAD" in strategy_upper and len(trades) >= 2:
+                strikes = [float(trade['strike']) for trade in trades if trade.get('strike')]
+                if len(strikes) >= 2:
+                    spread_width = abs(max(strikes) - min(strikes))
+                    
+                    if "CALL SPREAD" in strategy_upper or "PUT SPREAD" in strategy_upper:
+                        if premium > 0:  # Debit spread
+                            max_gain = spread_width - abs(premium)
+                            max_loss = abs(premium)
+                        else:  # Credit spread
+                            max_gain = abs(premium)
+                            max_loss = spread_width - abs(premium)
+                        return max_gain, max_loss
+            
+            # Straddle strategies
+            elif "STRADDLE" in strategy_upper and len(trades) >= 2:
+                if "LONG" in strategy_upper:
+                    # Long straddle: unlimited gain, limited loss (premium paid)
+                    return None, abs(premium)
+                elif "SHORT" in strategy_upper:
+                    # Short straddle: limited gain (premium received), unlimited loss
+                    return abs(premium), None
+            
+            # Strangle strategies  
+            elif "STRANGLE" in strategy_upper and len(trades) >= 2:
+                if "LONG" in strategy_upper:
+                    # Long strangle: unlimited gain, limited loss (premium paid)
+                    return None, abs(premium)
+                elif "SHORT" in strategy_upper:
+                    # Short strangle: limited gain (premium received), unlimited loss
+                    return abs(premium), None
+            
+            # Butterfly strategies
+            elif "BUTTERFLY" in strategy_upper and len(trades) >= 3:
+                strikes = [float(trade['strike']) for trade in trades if trade.get('strike')]
+                if len(strikes) >= 3:
+                    strikes.sort()
+                    if len(strikes) == 3:
+                        # Standard butterfly: max gain at middle strike
+                        wing_width = min(strikes[1] - strikes[0], strikes[2] - strikes[1])
+                        if premium > 0:  # Long butterfly (debit)
+                            max_gain = wing_width - abs(premium)
+                            max_loss = abs(premium)
+                        else:  # Short butterfly (credit)
+                            max_gain = abs(premium)
+                            max_loss = wing_width - abs(premium)
+                        return max_gain, max_loss
+            
+            # Condor strategies
+            elif "CONDOR" in strategy_upper and len(trades) >= 4:
+                strikes = [float(trade['strike']) for trade in trades if trade.get('strike')]
+                if len(strikes) >= 4:
+                    strikes.sort()
+                    # Condor spread width
+                    spread_width = min(strikes[1] - strikes[0], strikes[3] - strikes[2])
+                    if premium > 0:  # Long condor (debit)
+                        max_gain = spread_width - abs(premium)
+                        max_loss = abs(premium)
+                    else:  # Short condor (credit)
+                        max_gain = abs(premium)
+                        max_loss = spread_width - abs(premium)
+                    return max_gain, max_loss
+            
+            # Iron Condor strategies
+            elif "IRON CONDOR" in strategy_upper and len(trades) >= 4:
+                strikes = [float(trade['strike']) for trade in trades if trade.get('strike')]
+                if len(strikes) >= 4:
+                    strikes.sort()
+                    # Iron condor: credit strategy
+                    spread_width = min(strikes[1] - strikes[0], strikes[3] - strikes[2])
+                    max_gain = abs(premium)  # Credit received
+                    max_loss = spread_width - abs(premium)
+                    return max_gain, max_loss
+            
+            # Collar strategies
+            elif "COLLAR" in strategy_upper and len(trades) >= 2:
+                # Protective collar: limited gain and loss
+                call_strikes = [float(t['strike']) for t in trades if t.get('strike') and t.get('callOrPut') == 'C']
+                put_strikes = [float(t['strike']) for t in trades if t.get('strike') and t.get('callOrPut') == 'P']
+                
+                if call_strikes and put_strikes:
+                    max_call_strike = max(call_strikes)
+                    max_put_strike = max(put_strikes)
+                    
+                    # Assuming underlying position exists
+                    if max_call_strike > max_put_strike:
+                        collar_width = max_call_strike - max_put_strike
+                        max_gain = collar_width - abs(premium)
+                        max_loss = abs(premium)
+                        return max_gain, max_loss
+            
+            # Risk Reversal strategies
+            elif "RISK REVERSAL" in strategy_upper or "REVERSAL" in strategy_upper:
+                if len(trades) >= 2:
+                    # Risk reversal has unlimited gain/loss depending on direction
+                    call_trades = [t for t in trades if t.get('callOrPut') == 'C']
+                    put_trades = [t for t in trades if t.get('callOrPut') == 'P']
+                    
+                    if call_trades and put_trades:
+                        call_direction = call_trades[0].get('direction', '').upper()
+                        put_direction = put_trades[0].get('direction', '').upper()
+                        
+                        # Long call + Short put = Bullish risk reversal (unlimited gain, unlimited loss)
+                        if call_direction == 'BUY' and put_direction == 'SELL':
+                            return None, None  # Both unlimited
+                        # Short call + Long put = Bearish risk reversal (unlimited loss, unlimited gain)  
+                        elif call_direction == 'SELL' and put_direction == 'BUY':
+                            return None, None  # Both unlimited
+            
+            # Calendar/Time spreads
+            elif "CALENDAR" in strategy_upper and len(trades) >= 2:
+                # Calendar spreads have limited max gain/loss
+                # Max gain typically occurs when short option expires worthless
+                max_gain = abs(premium) * 2  # Rough estimate
+                max_loss = abs(premium)
+                return max_gain, max_loss
+            
+            # Ratio spreads
+            elif "RATIO" in strategy_upper and len(trades) >= 2:
+                if "CALL" in strategy_upper:
+                    # Call ratio spread can have unlimited loss on upside
+                    if premium < 0:  # Credit received
+                        return abs(premium), None  # Limited gain, unlimited loss
+                    else:  # Debit paid
+                        strikes = [float(t['strike']) for t in trades if t.get('strike')]
+                        if len(strikes) >= 2:
+                            spread_width = abs(max(strikes) - min(strikes))
+                            max_gain = spread_width - abs(premium)
+                            return max_gain, None  # Limited gain, unlimited loss
+                elif "PUT" in strategy_upper:
+                    # Put ratio spread can have unlimited loss on downside
+                    if premium < 0:  # Credit received
+                        return abs(premium), None  # Limited gain, unlimited loss
+                    else:  # Debit paid
+                        strikes = [float(t['strike']) for t in trades if t.get('strike')]
+                        if len(strikes) >= 2:
+                            spread_width = abs(max(strikes) - min(strikes))
+                            max_gain = spread_width - abs(premium)
+                            return max_gain, None  # Limited gain, unlimited loss
+            
+            # For complex strategies, use the full calculation
+            else:
+                return None, None
+                
+        except Exception as e:
+            logger.error(f"Error in simplified max gain/loss calculation: {e}")
+            return None, None
+        
+        return None, None
 
 # Global instance
 insights_generator = InsightsGenerator()
